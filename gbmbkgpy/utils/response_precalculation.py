@@ -69,8 +69,10 @@ class Response_Precalculation(object):
         data_type="ctime",
         trigger=None,
         simulation=False,
+        data=None,
     ):
         self._echans = echans
+        self.data = data
 
         responses = {}
 
@@ -87,6 +89,7 @@ class Response_Precalculation(object):
                 data_type,
                 trigger,
                 simulation,
+                data=self.data,
             )
 
         self._responses = responses
@@ -117,6 +120,7 @@ class Det_Response_Precalculation(object):
         data_type="ctime",
         trigger=None,
         simulation=False,
+        data=None,
     ):
         """
         initialize the grid around the detector and set the values for the Ebins of incoming and detected photons
@@ -125,6 +129,7 @@ class Det_Response_Precalculation(object):
         :param Ebin_edge_incoming: Ebins edges of incomming photons
         :param Ebin_edge_detector: Ebins edges of detector
         """
+        self.data = data
         assert (
             det in valid_det_names
         ), "Invalid det name. Must be one of these {} but is {}.".format(
@@ -459,9 +464,19 @@ class Det_Response_Precalculation(object):
         responses = []
         # Create the DRM object (quaternions and sc_pos are dummy values, not important
         # as we calculate everything in the sat frame
-        dummy_pos_inter = PositionInterpolator(quats=np.array([[0.0745, -0.105, 0.0939, 0.987],[0.0745, -0.105, 0.0939, 0.987]]), 
-                                               sc_pos=np.array([[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6],[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]]) ,
-                                               time=np.array([-1,1]), trigtime=0)
+        dummy_pos_inter = PositionInterpolator(
+            quats=np.array(
+                [[0.0745, -0.105, 0.0939, 0.987], [0.0745, -0.105, 0.0939, 0.987]]
+            ),
+            sc_pos=np.array(
+                [
+                    [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                    [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                ]
+            ),
+            time=np.array([-1, 1]),
+            trigtime=0,
+        )
         DRM = DRMGen(
             dummy_pos_inter,
             self._det,
@@ -618,10 +633,11 @@ class Det_Response_Precalculation(object):
 
                 zen = np.arcsin(z) * 180 / np.pi
                 az = np.arctan2(y, x) * 180 / np.pi
-
+                position_interpolator = PositionInterpolator.from_poshist(
+                    self.data.pos_hist
+                )
                 drm = DRMGen(
-                    np.array([0.0745, -0.105, 0.0939, 0.987]),
-                    np.array([-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]),
+                    dummy_pos_inter,
                     self._det,
                     self.Ebin_in_edge,
                     mat_type=0,

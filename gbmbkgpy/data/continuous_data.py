@@ -1,7 +1,8 @@
 import astropy.io.fits as fits
 
 from gbmbkgpy.io.file_utils import file_existing_and_readable
-from gbmbkgpy.io.downloading import download_data_file
+from gbmbkgpy.io.downloading import download_files, download_gbm_file
+
 
 import astropy.time as astro_time
 
@@ -51,7 +52,16 @@ valid_det_names = [
 
 
 class Data(object):
-    def __init__(self, dates, detectors, data_type, echans, simulation=False, min_time=None, max_time=None):
+    def __init__(
+        self,
+        dates,
+        detectors,
+        data_type,
+        echans,
+        simulation=False,
+        min_time=None,
+        max_time=None,
+    ):
         """
         Initalize the ContinousData Class, which contains the information about the time bins
         and counts of the data.
@@ -325,6 +335,10 @@ class Data(object):
         else:
             return np.mean(self._time_bins[self.valid_time_mask], axis=1)
 
+    @property
+    def pos_hist(self):
+        return self._pos_hist
+
     def _build_arrays(self, min_time=None, max_time=None):
         """
         Iterates over all wanted days and adds the count and time bin information in one big array
@@ -335,13 +349,15 @@ class Data(object):
         for det_idx, det in enumerate(self._detectors):
 
             for day_idx, day in enumerate(self._dates):
-                counts, time_bins, day_met = self._one_day_one_det_data(day, det, min_time, max_time)
+                counts, time_bins, day_met = self._one_day_one_det_data(
+                    day, det, min_time, max_time
+                )
 
                 if day_idx == 0:
                     count_array = counts
                     time_bins_array = time_bins
                     day_met_array = np.array([day_met])
-                    
+
                     day_start_times = np.array([time_bins[0, 0]])
                     day_stop_times = np.array([time_bins[-1, 1]])
 
@@ -354,7 +370,7 @@ class Data(object):
                         following_day = np.append(following_day, True)
                     else:
                         following_day = np.append(following_day, False)
-                        
+
                     count_array = np.append(count_array, counts[start_index:], axis=0)
                     time_bins_array = np.append(
                         time_bins_array, time_bins[start_index:], axis=0
@@ -419,7 +435,7 @@ class Data(object):
                 get_path_of_external_data_dir(), self._data_type, day, datafile_name
             )
 
-        poshistfile_name = "glg_{0}_all_{1}_v00.fit".format("poshist", day)
+        poshistfile_name = f"{day}/glg_poshist_all_{day}_v00.fit"
         poshistfile_path = os.path.join(
             get_path_of_external_data_dir(), "poshist", poshistfile_name
         )
@@ -428,17 +444,17 @@ class Data(object):
         if using_mpi:
             if rank == 0:
                 if not file_existing_and_readable(datafile_path):
-                    download_data_file(day, self._data_type, det)
+                    download_files(day, self._data_type, det)
 
                 if not file_existing_and_readable(poshistfile_path):
-                    download_data_file(day, "poshist")
+                    download_gbm_file(data_type="poshist", date=day)
             comm.Barrier()
         else:
             if not file_existing_and_readable(datafile_path):
-                download_data_file(day, self._data_type, det)
+                download_files(data_type=self._data_type, det=det, day=day)
 
             if not file_existing_and_readable(poshistfile_path):
-                download_data_file(day, "poshist")
+                download_gbm_file(data_type="poshist", date=day)
 
         # Save poshistfile_path for later usage
         self._pos_hist = poshistfile_path
@@ -479,18 +495,18 @@ class Data(object):
 
         # slice the time between min and max time
         if min_time:
-            start_idx = np.argwhere(bin_stop>min_time)[0,0]
+            start_idx = np.argwhere(bin_stop > min_time)[0, 0]
         else:
             start_idx = 0
         if max_time:
-            stop_idx = np.argwhere(bin_start<max_time)[-1,0]
+            stop_idx = np.argwhere(bin_start < max_time)[-1, 0]
         else:
             stop_idx = -1
 
         bin_start = bin_start[start_idx:stop_idx]
         bin_stop = bin_stop[start_idx:stop_idx]
         counts = counts[start_idx:stop_idx]
-            
+
         # Calculate the MET time for the day
         day = day
         year = "20%s" % day[:2]

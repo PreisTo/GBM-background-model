@@ -71,8 +71,8 @@ setup:
        # free: []
         #free: [Crab, SCOX-1]
 
-  fix_earth:    true
-  fix_cgb:      true
+  fix_earth:    false
+  fix_cgb:      false
   use_sun:      false
   cr_approximation: BGO
   use_eff_area_correction: true

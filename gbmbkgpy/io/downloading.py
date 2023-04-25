@@ -212,6 +212,7 @@ def download_files(data_type, det, day):
     )
 
     if not file_existing_and_readable(datafile_path):
+        print(data_type)
         download_gbm_file(day, data_type, det)
 
     if not file_existing_and_readable(poshistfile_path):

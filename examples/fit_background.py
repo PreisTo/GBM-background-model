@@ -84,7 +84,7 @@ args = parser.parse_args()
 
 # Load the config.yml
 with open(args.config_file) as f:
-    config = yaml.load(f)
+    config = yaml.safe_load(f)
 
 ############# Overwrite config with BASH arguments ################
 

@@ -171,6 +171,7 @@ class BackgroundModelGenerator(object):
             Ngrid=config["response"]["Ngrid"],
             data_type=config["general"]["data_type"],
             simulation=config["general"].get("simulation", False),
+            data=self._data,
         )
 
         print_progress("Done")
@@ -201,25 +202,27 @@ class BackgroundModelGenerator(object):
 
     def _setup_sources(self, config):
         # Create all individual sources and add them to a list
-        #assert (config["setup"]["fix_earth"] and config["setup"]["fix_cgb"]) or (
+        # assert (config["setup"]["fix_earth"] and config["setup"]["fix_cgb"]) or (
         #    not config["setup"]["fix_earth"] and not config["setup"]["fix_cgb"]
-        #), "At the moment albeod and cgb spectrum have to be either both fixed or both free"
+        # ), "At the moment albeod and cgb spectrum have to be either both fixed or both free"
 
         if config["setup"]["fix_earth"] or config["setup"]["fix_cgb"]:
-            self._albedo_cgb_obj_fixed = Albedo_CGB_fixed(self._resp,
-                                                    self._geom,
-                                                    earth_dict=config["setup"]["Earth"],
-                                                    cgb_dict=config["setup"]["CGB"])
+            self._albedo_cgb_obj_fixed = Albedo_CGB_fixed(
+                self._resp,
+                self._geom,
+                earth_dict=config["setup"]["Earth"],
+                cgb_dict=config["setup"]["CGB"],
+            )
         else:
             self._albedo_cgb_obj_fixed = None
-            
+
         if not config["setup"]["fix_earth"] or not config["setup"]["fix_cgb"]:
             self._albedo_cgb_obj_free = Albedo_CGB_free(self._resp, self._geom)
         else:
             self._albedo_cgb_obj_free = None
-        #if config["setup"]["use_sun"]:
+        # if config["setup"]["use_sun"]:
         #    self._sun_obj = Sun(self._resp, self._geom, config["general"]["echans"])
-        #else:
+        # else:
         #    self._sun_obj = None
 
         if config["setup"]["use_gc"]:
@@ -260,7 +263,8 @@ class BackgroundModelGenerator(object):
         )
 
         import numpy as np
-        self._dets_saa = config["saa"]["dets_saa"] #np.array(["n0"])
+
+        self._dets_saa = config["saa"]["dets_saa"]  # np.array(["n0"])
         print_progress("Done")
 
     def _instantiate_model(self, config):
@@ -337,7 +341,7 @@ class BackgroundModelGenerator(object):
 
         if config["setup"]["use_sun"]:
             parameter_bounds["sun_norm"] = config["priors"]["sun"]["norm"]
-            #parameter_bounds["sun_index"] = config["priors"]["sun"]["index"]
+            # parameter_bounds["sun_index"] = config["priors"]["sun"]["index"]
         # Global sources for all echans
 
         # If PS spectrum is fixed only the normalization, otherwise C, index
@@ -349,22 +353,24 @@ class BackgroundModelGenerator(object):
                     filepath = os.path.join(
                         get_path_of_external_data_dir(),
                         "point_sources",
-                        f"ps_swift_{day}_limit_{limit}.dat"
+                        f"ps_swift_{day}_limit_{limit}.dat",
                     )
                     # Read it as pandas
                     ps_df_add = pd.read_table(filepath, names=["name", "ra", "dec"])
                     exclude = [
-                        entry.upper() for entry in config["setup"]["ps_list"][ps]["exclude"]
+                        entry.upper()
+                        for entry in config["setup"]["ps_list"][ps]["exclude"]
                     ]
                     free = [
-                        entry.upper() for entry in config["setup"]["ps_list"][ps]["free"]
+                        entry.upper()
+                        for entry in config["setup"]["ps_list"][ps]["free"]
                     ]
                     for row in ps_df_add.itertuples():
                         if row[1].upper() not in exclude:
                             if row[1].upper() not in free:
-                                parameter_bounds[f"norm_{row[1]}_pl"] = config["priors"][
-                                    "ps"
-                                ]["fixed"]["pl"]["norm"]
+                                parameter_bounds[f"norm_{row[1]}_pl"] = config[
+                                    "priors"
+                                ]["ps"]["fixed"]["pl"]["norm"]
                             else:
                                 parameter_bounds[
                                     f"ps_{row[1]}_spectrum_fitted_norm_pl".format(ps)
@@ -392,10 +398,14 @@ class BackgroundModelGenerator(object):
                                 names=["name", "ra", "dec"],
                             )
                             for row in ps_df_add.itertuples():
-                                for spectrum in config["setup"]["ps_list"][ps]["spectrum"]:
-                                    parameter_bounds[f"norm_{row[1]}_{spectrum}"] = config[
-                                        "priors"
-                                    ]["ps"]["fixed"][spectrum]["norm"]
+                                for spectrum in config["setup"]["ps_list"][ps][
+                                    "spectrum"
+                                ]:
+                                    parameter_bounds[
+                                        f"norm_{row[1]}_{spectrum}"
+                                    ] = config["priors"]["ps"]["fixed"][spectrum][
+                                        "norm"
+                                    ]
 
                     else:
                         if ps[:4] != "list":
@@ -407,7 +417,9 @@ class BackgroundModelGenerator(object):
                                     ] = config["priors"]["ps"]["free"][spectrum]["norm"]
                                     parameter_bounds[
                                         "ps_{}_spectrum_fitted_index".format(ps)
-                                    ] = config["priors"]["ps"]["free"][spectrum]["index"]
+                                    ] = config["priors"]["ps"]["free"][spectrum][
+                                        "index"
+                                    ]
 
                                 elif spectrum == "bb":
 
@@ -425,13 +437,17 @@ class BackgroundModelGenerator(object):
                             )
                             for row in ps_df_add.itertuples():
 
-                                for spectrum in config["setup"]["ps_list"][ps]["spectrum"]:
+                                for spectrum in config["setup"]["ps_list"][ps][
+                                    "spectrum"
+                                ]:
 
                                     if spectrum == "pl":
 
                                         parameter_bounds[
                                             f"ps_{row[1]}_spectrum_fitted_norm_pl"
-                                        ] = config["priors"]["ps"]["free"][spectrum]["norm"]
+                                        ] = config["priors"]["ps"]["free"][spectrum][
+                                            "norm"
+                                        ]
                                         parameter_bounds[
                                             f"ps_{row[1]}_spectrum_fitted_index"
                                         ] = config["priors"]["ps"]["free"][spectrum][
@@ -442,11 +458,15 @@ class BackgroundModelGenerator(object):
 
                                         parameter_bounds[
                                             f"ps_{row[1]}_spectrum_fitted_norm_bb"
-                                        ] = config["priors"]["ps"]["free"][spectrum]["norm"]
+                                        ] = config["priors"]["ps"]["free"][spectrum][
+                                            "norm"
+                                        ]
 
                                         parameter_bounds[
                                             f"ps_{row[1]}_spectrum_fitted_temp"
-                                        ] = config["priors"]["ps"]["free"][spectrum]["temp"]
+                                        ] = config["priors"]["ps"]["free"][spectrum][
+                                            "temp"
+                                        ]
 
         if config["setup"]["use_earth"]:
             # If earth spectrum is fixed only the normalization, otherwise C, index1, index2 and E_break
@@ -502,7 +522,7 @@ class BackgroundModelGenerator(object):
                     ]
 
         self._parameter_bounds = parameter_bounds
-        
+
         # Add bounds to the parameters for multinest
         self._model.set_parameter_priors(self._parameter_bounds)
 
@@ -609,6 +629,7 @@ class TrigdatBackgroundModelGenerator(BackgroundModelGenerator):
             Ngrid=config["response"]["Ngrid"],
             data_type=config["general"]["data_type"],
             trigger=config["general"]["trigger"],
+            data=self.data,
         )
 
         print_progress("Done")

@@ -6,7 +6,7 @@ import astropy.time as astro_time
 from gbmbkgpy.utils.progress_bar import progress_bar
 from gbmbkgpy.io.package_data import get_path_of_external_data_dir
 from gbmbkgpy.io.file_utils import file_existing_and_readable
-from gbmbkgpy.io.downloading import download_data_file
+from gbmbkgpy.io.downloading import download_files, download_gbm_file
 
 try:
 
@@ -103,18 +103,18 @@ class Geometry(object):
             for day in dates:
                 poshistfile_name = "glg_{0}_all_{1}_v00.fit".format("poshist", day)
                 poshistfile_path = os.path.join(
-                    get_path_of_external_data_dir(), "poshist", poshistfile_name
+                    get_path_of_external_data_dir(), "poshist", day, poshistfile_name
                 )
 
                 # If using MPI only rank=0 downloads the data, all other have to wait
                 if using_mpi:
                     if rank == 0:
                         if not file_existing_and_readable(poshistfile_path):
-                            download_data_file(day, "poshist")
+                            download_gbm_file(data_type="poshist", date=day)
                     comm.Barrier()
                 else:
                     if not file_existing_and_readable(poshistfile_path):
-                        download_data_file(day, "poshist")
+                        download_gbm_file(data_type="poshist", date=day)
 
                 # Save poshistfile_path for later usage
                 self._pos_hist = np.append(self._pos_hist, poshistfile_path)
@@ -251,7 +251,7 @@ class Geometry(object):
     @property
     def earth_az(self):
         """
-        Returns the azimuth angle of the earth in the satellite frame for all times for which the 
+        Returns the azimuth angle of the earth in the satellite frame for all times for which the
         geometry was calculated
         """
 
@@ -260,7 +260,7 @@ class Geometry(object):
     @property
     def earth_zen(self):
         """
-        Returns the zenith angle of the earth in the satellite frame for all times for which the 
+        Returns the zenith angle of the earth in the satellite frame for all times for which the
         geometry was calculated
         """
 
@@ -269,7 +269,7 @@ class Geometry(object):
     @property
     def earth_position(self):
         """
-        Returns the Earth position as SkyCoord object for all times for which the geometry was 
+        Returns the Earth position as SkyCoord object for all times for which the geometry was
         calculated
         """
         return self._earth_positions
@@ -285,7 +285,7 @@ class Geometry(object):
     @property
     def quaternion(self):
         """
-        Returns the quaternions, defining the rotation of the satellite, for all times for which the 
+        Returns the quaternions, defining the rotation of the satellite, for all times for which the
         geometry was calculated
         """
 
@@ -294,7 +294,7 @@ class Geometry(object):
     @property
     def sc_pos(self):
         """
-        Returns the spacecraft position, in ECI coordinates, for all times for which the 
+        Returns the spacecraft position, in ECI coordinates, for all times for which the
         geometry was calculated
         """
 
@@ -364,7 +364,7 @@ class Geometry(object):
 
         # Calculate spacecraft altitude
         earth_radius = 6371.0
-        fermi_radius = np.sqrt(np.sum(sc_positions ** 2, axis=0))
+        fermi_radius = np.sqrt(np.sum(sc_positions**2, axis=0))
         sc_altitude = fermi_radius - earth_radius
 
         # Init all lists
@@ -508,7 +508,7 @@ class Geometry(object):
 
         # Calculate spacecraft altitude
         earth_radius = 6371.0
-        fermi_radius = np.sqrt(np.sum(sc_positions ** 2, axis=0))
+        fermi_radius = np.sqrt(np.sum(sc_positions**2, axis=0))
         sc_altitude = fermi_radius - earth_radius
 
         # Init all lists
@@ -525,9 +525,7 @@ class Geometry(object):
                     quaternion=quaternions[step_idx],
                     sc_pos=sc_positions[step_idx],
                     time=astro_time.Time(
-                        position_interpolator.utc(
-                            list_times_to_calculate[step_idx]
-                        )
+                        position_interpolator.utc(list_times_to_calculate[step_idx])
                     ),
                 )
 
@@ -535,7 +533,7 @@ class Geometry(object):
                     det.earth_position,
                     det.earth_az_zen_sat,
                     det.sun_position,
-                    [det.sun_position.lon.deg, det.sun_position.lat.deg]
+                    [det.sun_position.lon.deg, det.sun_position.lat.deg],
                 )
 
             multiprocessing_n_cores = int(
@@ -569,7 +567,9 @@ class Geometry(object):
                     )
 
                     sun_positions.append(det.sun_position)
-                    sun_az_zen.append([det.sun_position.lon.deg, det.sun_position.lat.deg])
+                    sun_az_zen.append(
+                        [det.sun_position.lon.deg, det.sun_position.lat.deg]
+                    )
 
                     earth_positions.append(det.earth_position)
                     earth_az_zen.append(det.earth_az_zen_sat)
@@ -634,7 +634,7 @@ class Geometry(object):
         for day in self._day_list:
             poshistfile_name = "glg_{0}_all_{1}_v00.fit".format("poshist", day)
             poshistfile_path = os.path.join(
-                get_path_of_external_data_dir(), "poshist", poshistfile_name
+                get_path_of_external_data_dir(), "poshist", day, poshistfile_name
             )
 
             # Create the PositionInterpolator object with the infos from the poshist file
