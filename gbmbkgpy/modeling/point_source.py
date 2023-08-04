@@ -5,7 +5,7 @@ from gbmbkgpy.io.package_data import get_path_of_data_file
 from gbmbkgpy.utils.progress_bar import progress_bar
 from gbmbkgpy.utils.spectrum import _spec_integral_bb, _spec_integral_pl
 from scipy.interpolate import interpolate
-
+from gbmgeometry import PositionInterpolator
 try:
 
     # see if we have mpi and/or are upalsing parallel
@@ -147,18 +147,25 @@ class PointSrc_free(object):
     def _response_one_det(self, det_response):
 
         response_matrix = []
+        pos_int = PositionInterpolator(
+            quats=self._geom.quaternion,
+            sc_pos=self._geom.sc_pos,
+            time=self._geom.geometry_times
+            )
+
         d = DRMGen(
-            self._geom.quaternion[0],
-            self._geom.sc_pos[0],
-            det_response.det,
-            det_response.Ebin_in_edge,
+            position_interpolator=pos_int,
+            det_number=det_response.det,
+            ebin_edge_in=det_response.Ebin_in_edge,
             mat_type=0,
             ebin_edge_out=det_response.Ebin_out_edge,
+            time=self._geom.geometry_times[0]
             )
         for j in range(len(self._geom.quaternion)):
-            d._quaternions = self._geom.quaternion[j]
-            d._sc_pos = self._geom.sc_pos[j]
-            d._compute_spacecraft_coordinates()
+            d.set_time(self._geom.geometry_times[j])
+            #d._quaternions = self._geom.quaternion[j]
+            #d._sc_pos = self._geom.sc_pos[j]
+            #d._compute_spacecraft_coordinates()
             
             all_response_step = (d
                 .to_3ML_response(self._ra, self._dec)

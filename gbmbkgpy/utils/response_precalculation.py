@@ -9,7 +9,7 @@ from gbmbkgpy.io.file_utils import (
 )
 import astropy.io.fits as fits
 from gbmbkgpy.utils.progress_bar import progress_bar
-
+from gbmgeometry import PositionInterpolator
 try:
     # see if we have mpi and/or are upalsing parallel
 
@@ -458,15 +458,20 @@ class Det_Response_Precalculation(object):
         responses = []
         # Create the DRM object (quaternions and sc_pos are dummy values, not important
         # as we calculate everything in the sat frame
-
+        pos_int = PositionInterpolator(
+            quats=np.repeat(np.array([[0.0745, -0.105, 0.0939, 0.987]]), 2, axis=0),
+            sc_pos=np.repeat(np.array([[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]]), 2, axis=0),
+            time=np.array([0,10])
+            )
+            
         DRM = DRMGen(
-            np.array([0.0745, -0.105, 0.0939, 0.987]),
-            np.array([-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]),
-            self._det,
-            self.Ebin_in_edge,
+            position_interpolator=pos_int,
+            det_number=self._det,
+            ebin_edge_in=self.Ebin_in_edge,
             mat_type=0,
             ebin_edge_out=self._Ebin_out_edge,
             occult=False,
+            time=5,
         )
 
         # If MPI is used split up the points among the used cores to speed up

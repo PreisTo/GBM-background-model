@@ -715,11 +715,11 @@ def build_point_sources(
     ### Single core calc ###
     for i, ps in enumerate(point_source_list):
         for row in ps_df.itertuples():
-            if row[1] == ps:
+            if row[1].upper() == ps:
 
                 if not point_source_list[ps]["fixed"]:
-                    point_sources_dic[row[1]] = PointSrc_free(
-                        name=row[1],
+                    point_sources_dic[ps] = PointSrc_free(
+                        name=ps,
                         ra=row[2],
                         dec=row[3],
                         det_responses=det_responses,
@@ -729,8 +729,8 @@ def build_point_sources(
 
                 else:
                     for entry in point_source_list[ps]["spectrum"]:
-                        point_sources_dic[f"{row[1]}_{entry}"] = PointSrc_fixed(
-                            name=row[1],
+                        point_sources_dic[f"{ps}_{entry}"] = PointSrc_fixed(
+                            name=ps,
                             ra=row[2],
                             dec=row[3],
                             det_responses=det_responses,
