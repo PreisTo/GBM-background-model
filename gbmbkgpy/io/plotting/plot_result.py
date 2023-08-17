@@ -43,7 +43,7 @@ class ResultPlotGenerator(object):
         else:
             # Load the config.yml
             with open(config_file) as f:
-                config = yaml.load(f)
+                config = yaml.safe_load(f)
 
         self._result_dict = result_dict
 
