@@ -53,7 +53,7 @@ class BackgroundModelGenerator(object):
 
     def from_config_file(self, config_yml):
         with open(config_yml) as f:
-            config = yaml.load(f)
+            config = yaml.safe_load(f)
 
         self.from_config_dict(config)
 

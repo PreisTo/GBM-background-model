@@ -1056,6 +1056,155 @@ class PHAWriter(object):
 
             f.create_dataset("stat_err", data=self._stat_err, compression="lzf")
 
+    def get_data_one_time_bin(self,
+                              time_bins,
+                              active_time_start,
+                              active_time_end):
+
+        # time bins only have to start in this interval
+        idx_min_time = time_bins[:, 0] >= active_time_start
+        idx_max_time = time_bins[:, 0] <= active_time_end
+        #idx_max_time = time_bins[:, 1] <= active_time_end
+        idx_valid_bin = idx_min_time * idx_max_time
+
+        tstart = time_bins[idx_valid_bin][0, 0]
+        telapse = (
+            time_bins[idx_valid_bin][-1, 1] - time_bins[idx_valid_bin][0, 0],
+            )
+        
+        res = {"tstart": tstart, "telapse": telapse}
+        for det in self._detectors:
+            det_idx = valid_det_names.index(det)
+
+            observed_counts = np.sum(
+                self._observed_counts[idx_valid_bin, det_idx, :], axis=0
+            )
+
+            observed_rate = observed_counts / telapse
+
+            model_counts = np.sum(self._model_counts[idx_valid_bin, det_idx, :], axis=0)
+
+            model_rate = model_counts / telapse
+
+            stat_err = (
+                np.sqrt(
+                    np.sum(np.square(self._stat_err[idx_valid_bin, det_idx, :]), axis=0)
+                )
+                / telapse
+            )
+
+            # Calculate the dead time of the detector:
+            # Each event in the echans 0-6 gives a dead time of 2.6 μs
+            # Each event in the over flow channel 7 gives a dead time of 10 μs
+            dead_time = (
+                np.sum(observed_counts[0:7]) * 2.6 * 1e-6 + observed_counts[7] * 1e-5
+            )
+            res[det] = {"observed_rate": observed_rate, "model_rate": model_counts,
+                        "dead_time": dead_time, "stat_err": stat_err}
+
+        return res
+
+    def write_phaII(
+        self,
+        output_dir,
+        active_time_start,
+        active_time_end,
+        trigger_time=None,
+        file_name=None,
+        overwrite=False,
+    ):
+        """
+        Creates saves a background file for each detector
+        """
+        if trigger_time is not None:
+            trigtime = trigger_time
+        else:
+            trigtime = self._trigger_time
+
+        time_bins = self._time_bins - trigtime
+
+        assert len(active_time_start)==len(active_time_end)
+        
+        #idx_min_time = time_bins[:, 0] >= active_time_start
+        #idx_max_time = time_bins[:, 1] <= active_time_end
+        #idx_valid_bin = idx_min_time * idx_max_time
+
+        all_res = []
+        for (start, stop) in zip(active_time_start,active_time_end):
+            all_res.append(self.get_data_one_time_bin(time_bins, start, stop))
+
+        for det in self._detectors:
+
+            tstart = []
+            telapse = []
+            observed_rate = []
+            model_rate = []
+            dead_time = []
+            stat_err = []
+            for res in all_res:
+                tstart.append(res["tstart"])
+                telapse.append(res["telapse"])
+                observed_rate.append(res[det]["observed_rate"])
+                model_rate.append(res[det]["model_rate"])
+                dead_time.append(res[det]["dead_time"])
+                stat_err.append(res[det]["stat_err"])
+            tstart = np.array(tstart)
+            telapse = np.array(telapse)
+            observer_rate = np.array(observed_rate)
+            model_rate = np.array(model_rate)
+            dead_time = np.array(dead_time)
+            stat_err = np.array(stat_err)
+            
+            # Write observed spectrum to PHA file
+            observed_spectrum = PHAII(
+                instrument_name="GBM_{}".format(det_name_lookup[det]),
+                telescope_name="Fermi",
+                tstart=tstart,
+                telapse=telapse,
+                channel=self._echans,
+                rate=observed_rate,
+                quality=np.zeros_like(observed_rate, dtype=int),
+                grouping=np.ones_like(self._echans),
+                exposure=telapse - dead_time,
+                backscale=1.0,
+                respfile=None,
+                ancrfile=None,
+                back_file=None,
+                sys_err=np.zeros_like(observed_rate),
+                stat_err=None,
+                is_poisson=True,
+            )
+
+            # Write background spectrum to PHA file
+            background_spectrum = PHAII(
+                instrument_name="GBM_{}".format(det_name_lookup[det]),
+                telescope_name="Fermi",
+                tstart=tstart,
+                telapse=telapse,
+                channel=self._echans,
+                rate=model_rate,
+                quality=np.zeros_like(model_rate, dtype=int),
+                grouping=np.ones_like(self._echans),
+                exposure=telapse - dead_time,
+                backscale=1.0,
+                respfile=None,
+                ancrfile=None,
+                back_file=None,
+                sys_err=np.zeros_like(model_rate),
+                stat_err=stat_err,
+                is_poisson=False,
+            )
+            
+            obs_file_path = os.path.join(output_dir, "{}_{}.pha".format(file_name, det))
+            bkg_file_path = os.path.join(
+                output_dir, "{}_{}_bak.pha".format(file_name, det)
+            )
+
+            observed_spectrum.writeto(obs_file_path, overwrite=overwrite)
+            background_spectrum.writeto(bkg_file_path, overwrite=overwrite)
+        
+
+    
     def write_pha(
         self,
         output_dir,
@@ -1075,7 +1224,7 @@ class PHAWriter(object):
             trigtime = self._trigger_time
 
         time_bins = self._time_bins - trigtime
-
+        
         idx_min_time = time_bins[:, 0] >= active_time_start
         idx_max_time = time_bins[:, 1] <= active_time_end
         idx_valid_bin = idx_min_time * idx_max_time
