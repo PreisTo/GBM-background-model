@@ -58,7 +58,6 @@ class BackgroundModelGenerator(object):
         self.from_config_dict(config)
 
     def from_config_dict(self, config, response=None, geometry=None):
-
         self._config = config
 
         self._instantiate_data_class(config)
@@ -71,19 +70,15 @@ class BackgroundModelGenerator(object):
         self._instantiate_ext_properties(config)
 
         if response is None:
-
             self._precalc_repsonse(config)
 
         else:
-
             self._resp = response
 
         if geometry is None:
-
             self._precalc_geometry(config)
 
         else:
-
             self._geom = geometry
 
         self._mask_valid_time_bins()
@@ -183,7 +178,6 @@ class BackgroundModelGenerator(object):
         print_progress("Done")
 
     def _mask_valid_time_bins(self):
-
         self._data.mask_invalid_bins(geometry_times=self._geom.geometry_times)
 
         self._saa_calc.mask_invalid_bins(
@@ -213,7 +207,7 @@ class BackgroundModelGenerator(object):
             self._gc_obj = None
 
         print_progress("Create Source list...")
-
+        print(config["setup"]["ps_list"])
         self._source_list = Setup(
             data=self._data,
             saa_object=self._saa_calc,
@@ -255,14 +249,11 @@ class BackgroundModelGenerator(object):
         print_progress("Done")
 
     def _build_parameter_bounds(self, config):
-
         parameter_bounds = {}
 
         # Echan individual sources
         for e in config["general"]["echans"]:
-
             if config["setup"]["use_saa"]:
-
                 # If fitting only one day add additional 'SAA' decay to account for leftover excitation
                 if (
                     config["saa"]["decay_at_day_start"]
@@ -273,11 +264,8 @@ class BackgroundModelGenerator(object):
                     offset = 0
 
                 for saa_nr in range(self._saa_calc.num_saa + offset):
-
                     if config["saa"]["decay_per_detector"]:
-
                         for det in self._data.detectors:
-
                             parameter_bounds[
                                 "norm_saa-{}_det-{}_echan-{}".format(saa_nr, det, e)
                             ] = config["priors"]["saa"]["norm"]
@@ -286,7 +274,6 @@ class BackgroundModelGenerator(object):
                             ] = config["priors"]["saa"]["decay"]
 
                     else:
-
                         parameter_bounds[
                             "norm_saa-{}_det-all_echan-{}".format(saa_nr, e)
                         ] = config["priors"]["saa"]["norm"]
@@ -296,7 +283,6 @@ class BackgroundModelGenerator(object):
                         ] = config["priors"]["saa"]["decay"]
 
             if config["setup"]["use_constant"]:
-
                 if f"cr_echan-{e}" in config["priors"]:
                     parameter_bounds["norm_constant_echan-{}".format(e)] = config[
                         "priors"
@@ -329,7 +315,7 @@ class BackgroundModelGenerator(object):
                 filepath = os.path.join(
                     get_path_of_external_data_dir(),
                     "point_sources",
-                    f"ps_swift_{day}_limit_{limit}.dat"
+                    f"ps_swift_{day}_limit_{limit}.dat",
                 )
                 # Read it as pandas
                 ps_df_add = pd.read_table(filepath, names=["name", "ra", "dec"])
@@ -380,7 +366,6 @@ class BackgroundModelGenerator(object):
                 else:
                     if ps[:4] != "list":
                         for spectrum in config["setup"]["ps_list"][ps]["spectrum"]:
-
                             if spectrum == "pl":
                                 parameter_bounds[
                                     "ps_{}_spectrum_fitted_norm_pl".format(ps)
@@ -390,7 +375,6 @@ class BackgroundModelGenerator(object):
                                 ] = config["priors"]["ps"]["free"][spectrum]["index"]
 
                             elif spectrum == "bb":
-
                                 parameter_bounds[
                                     "ps_{}_spectrum_fitted_norm_bb".format(ps)
                                 ] = config["priors"]["ps"]["free"][spectrum]["norm"]
@@ -404,11 +388,8 @@ class BackgroundModelGenerator(object):
                             names=["name", "ra", "dec"],
                         )
                         for row in ps_df_add.itertuples():
-
                             for spectrum in config["setup"]["ps_list"][ps]["spectrum"]:
-
                                 if spectrum == "pl":
-
                                     parameter_bounds[
                                         f"ps_{row[1]}_spectrum_fitted_norm_pl"
                                     ] = config["priors"]["ps"]["free"][spectrum]["norm"]
@@ -419,7 +400,6 @@ class BackgroundModelGenerator(object):
                                     ]
 
                                 elif spectrum == "bb":
-
                                     parameter_bounds[
                                         f"ps_{row[1]}_spectrum_fitted_norm_bb"
                                     ] = config["priors"]["ps"]["free"][spectrum]["norm"]
@@ -471,7 +451,6 @@ class BackgroundModelGenerator(object):
 
         if config["setup"]["use_eff_area_correction"]:
             for det in sorted(config["general"]["detectors"])[1:]:
-
                 if "eff_area_correction_{det}" in config["priors"]:
                     parameter_bounds[f"eff_area_corr_{det}"] = config["priors"][
                         f"eff_area_correction_{det}"
@@ -498,9 +477,7 @@ class BackgroundModelGenerator(object):
         print_progress("Done")
 
     def _mask_source_intervals(self, config):
-
         if "mask_intervals" in config:
-
             self._background_like.mask_source_intervals(config["mask_intervals"])
 
     @property

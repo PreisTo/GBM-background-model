@@ -29,8 +29,8 @@ try:
         using_mpi = False
         rank = 0
 except:
-        using_mpi = False
-        rank = 0
+    using_mpi = False
+    rank = 0
 
 
 class ResultPlotGenerator(object):
