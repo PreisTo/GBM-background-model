@@ -26,24 +26,21 @@ try:
         size = comm.Get_size()
 
     else:
-
         using_mpi = False
         rank = 0
 except:
-
-    using_mpi = False
-    rank = 0
+        using_mpi = False
+        rank = 0
 
 
 class ResultPlotGenerator(object):
     def __init__(self, config_file, result_dict):
-
         if isinstance(config_file, dict):
             config = config_file
         else:
             # Load the config.yml
             with open(config_file) as f:
-                config = yaml.load(f)
+                config = yaml.safe_load(f)
 
         self._result_dict = result_dict
 
@@ -76,6 +73,7 @@ class ResultPlotGenerator(object):
         self.show_earth = config["component"].get("show_earth", True)
         self.show_cgb = config["component"].get("show_cgb", True)
         self.show_sun = config["component"].get("show_sun", True)
+        self.show_gc = config["component"].get("show_gc", True)
         self.show_saa = config["component"].get("show_saa", True)
         self.show_cr = config["component"].get("show_cr", True)
         self.show_constant = config["component"].get("show_constant", True)
@@ -124,13 +122,11 @@ class ResultPlotGenerator(object):
 
     @classmethod
     def from_result_file(cls, config_file, result_data_file):
-
         result_dict = {}
 
         print("Load result file for plotting from: {}".format(result_data_file))
 
         with h5py.File(result_data_file, "r") as f:
-
             result_dict["dates"] = f.attrs["dates"]
             result_dict["detectors"] = f.attrs["detectors"]
             result_dict["echans"] = f.attrs["echans"]
@@ -155,12 +151,10 @@ class ResultPlotGenerator(object):
                 result_dict["sources"][source_name] = f["sources"][source_name][()]
 
             if "ppc_counts" in f.keys():
-
                 result_dict["ppc_counts"] = f["ppc_counts"][()]
                 result_dict["ppc_time_bins"] = f["ppc_time_bins"][()]
 
             else:
-
                 result_dict["ppc_counts"] = None
 
             result_dict["time_stamp"] = datetime.now().strftime("%y%m%d_%H%M")
@@ -231,13 +225,9 @@ class ResultPlotGenerator(object):
         return cls(config_file=config_file, result_dict=result_dict)
 
     def create_plots(self, output_dir, plot_name="plot_date_", time_stamp=None):
-
         for day_idx, day in enumerate(self._result_dict["dates"]):
-
             for det_idx, det in enumerate(self._result_dict["detectors"]):
-
                 for echan_idx, echan in enumerate(self._result_dict["echans"]):
-
                     if self._result_dict["ppc_counts"] is None:
                         self.show_ppc = False
 
@@ -317,7 +307,6 @@ class ResultPlotGenerator(object):
         elif self.time_t0 is not None:
             # if it is of type string, assume we are dealing with a UTC timestamp
             if isinstance(self.time_t0, str):
-
                 day_at = astro_time.Time("%s(UTC)" % self.time_t0)
 
                 self._time_ref = GBMTime(day_at).met
@@ -337,7 +326,6 @@ class ResultPlotGenerator(object):
         residual_plot = ResidualPlot(show_residuals=self.show_residuals, **kwargs)
 
         if self.bin_width > NO_REBIN:
-
             this_rebinner = Rebinner(
                 (self._result_dict["total_time_bins"] - self._time_ref),
                 self.bin_width,
@@ -357,7 +345,6 @@ class ResultPlotGenerator(object):
             rebin = True
 
         else:
-
             self._rebinned_observed_counts = self._result_dict["observed_counts"][
                 :, det_idx, echan_idx
             ]
@@ -474,6 +461,13 @@ class ResultPlotGenerator(object):
                 style_key = "sun"
                 sort_idx = 6
                 if not self.show_all_sources and not self.show_sun:
+                    continue
+
+            elif "galactic_center" in key.lower():
+                label = "Galactic Center"
+                style_key = "gc"
+                sort_idx = 7
+                if not self.show_all_sources and not self.show_gc:
                     continue
 
             else:
