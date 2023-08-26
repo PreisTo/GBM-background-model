@@ -203,7 +203,7 @@ class GC_fixed:
             weight = self._lorentzian(l, b)
 
             # populate weights array with weight
-            weights[time, ...] = weight
+            weights[time] = weight
 
         # set weight of occulted gridpoints to zero
         weights[occ_mask] = 0

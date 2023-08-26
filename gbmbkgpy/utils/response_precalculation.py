@@ -620,8 +620,7 @@ class Det_Response_Precalculation(object):
                 az = np.arctan2(y, x) * 180 / np.pi
 
                 drm = DRMGen(
-                    np.array([0.0745, -0.105, 0.0939, 0.987]),
-                    np.array([-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]),
+                    dummy_pos_inter,
                     self._det,
                     self.Ebin_in_edge,
                     mat_type=0,
