@@ -25,6 +25,7 @@ from gbmbkgpy.io.package_data import (
     get_path_of_data_file,
 )
 from gbmbkgpy.utils.select_pointsources import SelectPointsources
+from astropy.coordinates import get_icrs_coordinates
 
 # see if we have mpi and/or are upalsing parallel
 try:
@@ -749,7 +750,29 @@ def build_point_sources(
                             spec=point_source_list[ps]["spectrum"][entry],
                         )
                 break
-
+    for i, ps in enumerate(point_source_list):
+        if ps != "auto_swift" and ps[:4] != "list":
+            if point_source_list[ps]["fixed"]:
+                for entry in point_source_list[ps]["spectrum"]:
+                    if not f"{ps}_{entry}" in point_sources_dic.keys():
+                        print(
+                            f"PS {ps} not in the point source dict"
+                            + " - "
+                            + "will try too use astropy to get the coordinates"
+                        )
+                        try:
+                            pos = get_icrs_coordinates(ps)
+                            point_sources_dic[ps] = PointSrc_fixed(
+                                name=ps,
+                                ra=float(pos.ra.deg),
+                                dec=float(pos.dec.deg),
+                                det_responses=det_responses,
+                                geometry=geometry,
+                                echans=echans,
+                                spec=point_source_list[ps]["spectrum"][entry],
+                            )
+                        except Exception as e:
+                            print(e)
     # Add the point sources that are given as file with list of point sources
     for i, ps in enumerate(point_source_list):
         if ps[:4] == "list":
