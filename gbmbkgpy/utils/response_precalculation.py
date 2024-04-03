@@ -68,6 +68,7 @@ class Response_Precalculation(object):
         Ebin_edge_incoming=None,
         data_type="ctime",
         trigger=None,
+        geometry=None,
         simulation=False,
     ):
         self._echans = echans
@@ -86,6 +87,7 @@ class Response_Precalculation(object):
                 Ebin_edge_incoming,
                 data_type,
                 trigger,
+                geometry,
                 simulation,
             )
 
@@ -116,6 +118,7 @@ class Det_Response_Precalculation(object):
         Ebin_edge_incoming=None,
         data_type="ctime",
         trigger=None,
+        geometry=None,
         simulation=False,
     ):
         """
@@ -159,11 +162,14 @@ class Det_Response_Precalculation(object):
             ), "If you use trigdat data you have to provide a trigger."
 
         self._data_type = data_type
-
+        assert geometry is not None, "Need geometry for this"
+        self._geometry = geometry
         self._echan_mask_construction(echans)
-
+        self._dates = dates
         self._echans = echans
-
+        assert (
+            Ngrid < 32000
+        ), "Using the atmospheric scattering is highly memory intensive!!!"
         self._Ngrid = Ngrid
 
         self._detector = det
@@ -456,116 +462,52 @@ class Det_Response_Precalculation(object):
         Function to calculate the responses from all the points on the unit sphere.
         """
         # Initialize response list
-        responses = []
         # Create the DRM object (quaternions and sc_pos are dummy values, not important
         # as we calculate everything in the sat frame
-        dummy_pos_inter = PositionInterpolator(quats=np.array([[0.0745, -0.105, 0.0939, 0.987],[0.0745, -0.105, 0.0939, 0.987]]), 
-                                               sc_pos=np.array([[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6],[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]]) ,
-                                               time=np.array([-1,1]), trigtime=0)
-        DRM = DRMGen(
-            dummy_pos_inter,
-            self._det,
-            self.Ebin_in_edge,
-            mat_type=0,
-            ebin_edge_out=self._Ebin_out_edge,
-            occult=False,
+        posi = PositionInterpolator.from_poshist(
+            os.path.join(
+                os.environ.get("GBMDATA"),
+                "poshist",
+                f"glg_poshist_all_{self._dates[0]}_v00.fit",
+            )
         )
+        response_times = []
+        for time in self._geometry.time_days:
+            responses = []
+            DRM = DRMGen(
+                posi,
+                self._det,
+                self.Ebin_in_edge,
+                mat_type=0,
+                ebin_edge_out=self._Ebin_out_edge,
+                occult=False,
+                time=time,
+            )
 
-        # If MPI is used split up the points among the used cores to speed up
-        if using_mpi:
+            # If MPI is used split up the points among the used cores to speed up
+            if using_mpi:
 
-            # This builds some really large arrays which mpi can sometimes not handle anymore
-            # Therefore we have to separate the calculation and broadcasting in several runs of smaller arrays
+                # This builds some really large arrays which mpi can sometimes not handle anymore
+                # Therefore we have to separate the calculation and broadcasting in several runs of smaller arrays
 
-            # If Ngrid is smaller than 5000 or we are using ctime data everything is fine and mpi works in a single run
-            if (
-                self._Ngrid <= 5000
-                or self._data_type == "ctime"
-                or self._data_type == "trigdat"
-            ):
+                # If Ngrid is smaller than 5000 or we are using ctime data everything is fine and mpi works in a single run
+                if (
+                    self._Ngrid <= 5000
+                    or self._data_type == "ctime"
+                    or self._data_type == "trigdat"
+                ):
 
-                points_per_rank = float(self._Ngrid) / float(size)
-                points_lower_index = int(np.floor(points_per_rank * rank))
-                points_upper_index = int(np.floor(points_per_rank * (rank + 1)))
-
-                if rank == 0:
-
-                    with progress_bar(
-                        points_upper_index - points_lower_index,
-                        title="Calculating response on a grid around detector {}. "
-                        "This shows the progress of rank 0. All other should be about the same.".format(
-                            self.detector
-                        ),
-                    ) as p:
-
-                        for point in self._points[
-                            points_lower_index:points_upper_index
-                        ]:
-                            # get the response of every point
-                            matrix = self._response(
-                                point[0], point[1], point[2], DRM
-                            ).matrix
-                            responses.append(matrix.T)
-
-                            p.increase()
-
-                else:
-
-                    for point in self._points[points_lower_index:points_upper_index]:
-                        # get the response of every point
-                        matrix = self._response(
-                            point[0], point[1], point[2], DRM
-                        ).matrix
-                        responses.append(matrix.T)
-
-                # Collect all results in rank=0 and broadcast the final array to all ranks in the end
-                responses = np.array(responses)
-                responses_g = comm.gather(responses, root=0)
-                if rank == 0:
-                    responses_g = np.concatenate(responses_g)
-
-                # broadcast the resulting list to all ranks
-                responses = self._add_response_echan(comm.bcast(responses_g, root=0))
-
-            else:
-                num_per_run = 4000.0
-                # Split the grid points in runs with 4000 points each
-                num_split = int(np.ceil(self._Ngrid / num_per_run))
-
-                # Save start and stop index of every run
-                N_grid_start = np.arange(0, num_split * num_per_run, num_per_run)
-                N_grid_stop = np.array([])
-                for i in range(num_split):
-                    if i == num_split - 1:
-                        N_grid_stop = np.append(N_grid_stop, self._Ngrid)
-                    else:
-                        N_grid_stop = np.append(N_grid_stop, (i + 1) * num_per_run)
-
-                # Calcualte the response for all runs and save them as separate arrays in one big array
-                responses_all_split = []
-                for j in range(num_split):
-                    responses_split = []
-                    n_start = N_grid_start[j]
-                    n_stop = N_grid_stop[j]
-
-                    # Split up the points of this run among the mpi ranks
-                    points_per_rank = float(n_stop - n_start) / float(size)
-                    points_lower_index = int(np.floor(points_per_rank * rank) + n_start)
-                    points_upper_index = int(
-                        np.floor(points_per_rank * (rank + 1)) + n_start
-                    )
+                    points_per_rank = float(self._Ngrid) / float(size)
+                    points_lower_index = int(np.floor(points_per_rank * rank))
+                    points_upper_index = int(np.floor(points_per_rank * (rank + 1)))
 
                     if rank == 0:
-                        print(
-                            "We have to split up the response precalculation in {} runs."
-                            " MPI can not handle everything at once.".format(num_split)
-                        )
 
                         with progress_bar(
                             points_upper_index - points_lower_index,
-                            title="Calculating response on a grid around detector {}, run {} of {}."
-                            " This shows the progress of rank 0. All other should be about the same.".format(
-                                self.detector, j + 1, num_split
+                            title="Calculating response on a grid around detector {}. "
+                            "This shows the progress of rank 0. All other should be about the same.".format(
+                                self.detector
                             ),
                         ) as p:
 
@@ -576,7 +518,8 @@ class Det_Response_Precalculation(object):
                                 matrix = self._response(
                                     point[0], point[1], point[2], DRM
                                 ).matrix
-                                responses_split.append(matrix.T)
+                                responses.append(matrix.T)
+
                                 p.increase()
 
                     else:
@@ -588,75 +531,155 @@ class Det_Response_Precalculation(object):
                             matrix = self._response(
                                 point[0], point[1], point[2], DRM
                             ).matrix
-                            responses_split.append(matrix.T)
+                            responses.append(matrix.T)
 
                     # Collect all results in rank=0 and broadcast the final array to all ranks in the end
-                    responses_split = np.array(responses_split)
-                    responses_split_g = comm.gather(responses_split, root=0)
+                    responses = np.array(responses)
+                    responses_g = comm.gather(responses, root=0)
                     if rank == 0:
-                        responses_split_g = np.concatenate(responses_split_g)
+                        responses_g = np.concatenate(responses_g)
 
-                    responses_split = comm.bcast(responses_split_g, root=0)
-
-                    # Add results of this run to the big array
-                    responses_all_split.append(
-                        self._add_response_echan(responses_split)
+                    # broadcast the resulting list to all ranks
+                    responses = self._add_response_echan(
+                        comm.bcast(responses_g, root=0)
                     )
-                    del responses_split, responses_split_g
-                # Concatenate the big array to get one array with length Ngrid where the entries are the responses
-                # of the points
 
-                responses = np.concatenate(responses_all_split)
+                else:
+                    num_per_run = 4000.0
+                    # Split the grid points in runs with 4000 points each
+                    num_split = int(np.ceil(self._Ngrid / num_per_run))
 
-        elif using_multiprocessing:
-            print(
-                f"Calculating detector response for {self.detector} with multiprocessing."
-            )
+                    # Save start and stop index of every run
+                    N_grid_start = np.arange(0, num_split * num_per_run, num_per_run)
+                    N_grid_stop = np.array([])
+                    for i in range(num_split):
+                        if i == num_split - 1:
+                            N_grid_stop = np.append(N_grid_stop, self._Ngrid)
+                        else:
+                            N_grid_stop = np.append(N_grid_stop, (i + 1) * num_per_run)
 
-            def get_response(point):
-                x, y, z = point[0], point[1], point[2]
+                    # Calcualte the response for all runs and save them as separate arrays in one big array
+                    responses_all_split = []
+                    for j in range(num_split):
+                        responses_split = []
+                        n_start = N_grid_start[j]
+                        n_stop = N_grid_stop[j]
 
-                zen = np.arcsin(z) * 180 / np.pi
-                az = np.arctan2(y, x) * 180 / np.pi
+                        # Split up the points of this run among the mpi ranks
+                        points_per_rank = float(n_stop - n_start) / float(size)
+                        points_lower_index = int(
+                            np.floor(points_per_rank * rank) + n_start
+                        )
+                        points_upper_index = int(
+                            np.floor(points_per_rank * (rank + 1)) + n_start
+                        )
 
-                drm = DRMGen(
-                    np.array([0.0745, -0.105, 0.0939, 0.987]),
-                    np.array([-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]),
-                    self._det,
-                    self.Ebin_in_edge,
-                    mat_type=0,
-                    ebin_edge_out=self._Ebin_out_edge,
-                    occult=False,
+                        if rank == 0:
+                            print(
+                                "We have to split up the response precalculation in {} runs."
+                                " MPI can not handle everything at once.".format(
+                                    num_split
+                                )
+                            )
+
+                            with progress_bar(
+                                points_upper_index - points_lower_index,
+                                title="Calculating response on a grid around detector {}, run {} of {}."
+                                " This shows the progress of rank 0. All other should be about the same.".format(
+                                    self.detector, j + 1, num_split
+                                ),
+                            ) as p:
+
+                                for point in self._points[
+                                    points_lower_index:points_upper_index
+                                ]:
+                                    # get the response of every point
+                                    matrix = self._response(
+                                        point[0], point[1], point[2], DRM
+                                    ).matrix
+                                    responses_split.append(matrix.T)
+                                    p.increase()
+
+                        else:
+
+                            for point in self._points[
+                                points_lower_index:points_upper_index
+                            ]:
+                                # get the response of every point
+                                matrix = self._response(
+                                    point[0], point[1], point[2], DRM
+                                ).matrix
+                                responses_split.append(matrix.T)
+
+                        # Collect all results in rank=0 and broadcast the final array to all ranks in the end
+                        responses_split = np.array(responses_split)
+                        responses_split_g = comm.gather(responses_split, root=0)
+                        if rank == 0:
+                            responses_split_g = np.concatenate(responses_split_g)
+
+                        responses_split = comm.bcast(responses_split_g, root=0)
+
+                        # Add results of this run to the big array
+                        responses_all_split.append(
+                            self._add_response_echan(responses_split)
+                        )
+                        del responses_split, responses_split_g
+                    # Concatenate the big array to get one array with length Ngrid where the entries are the responses
+                    # of the points
+
+                    responses = np.concatenate(responses_all_split)
+
+            elif using_multiprocessing:
+                print(
+                    f"Calculating detector response for {self.detector} with multiprocessing."
                 )
-                matrix = drm.to_3ML_response_direct_sat_coord(az, zen).matrix
 
-                return matrix.T
+                def get_response(point):
+                    x, y, z = point[0], point[1], point[2]
 
-            multiprocessing_n_cores = int(
-                os.environ.get("gbm_bkg_multiprocessing_n_cores", cpu_count())
-            )
+                    zen = np.arcsin(z) * 180 / np.pi
+                    az = np.arctan2(y, x) * 180 / np.pi
 
-            with Pool(multiprocessing_n_cores) as pool:
-                responses = pool.map(get_response, self._points)
+                    drm = DRMGen(
+                        np.array([0.0745, -0.105, 0.0939, 0.987]),
+                        np.array([-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6]),
+                        self._det,
+                        self.Ebin_in_edge,
+                        mat_type=0,
+                        ebin_edge_out=self._Ebin_out_edge,
+                        occult=False,
+                    )
+                    matrix = drm.to_3ML_response_direct_sat_coord(az, zen).matrix
 
-            responses = self._add_response_echan(np.array(responses))
+                    return matrix.T
 
-        else:
-            with progress_bar(
-                len(self._points),
-                title="Calculating response on a grid around detector {}. "
-                "This shows the progress of rank 0. All other should be about the same.".format(
-                    self.detector
-                ),
-            ) as p:
-                for point in self._points:
-                    # get the response of every point
-                    matrix = self._response(point[0], point[1], point[2], DRM).matrix
-                    responses.append(matrix.T)
-                    p.increase()
+                multiprocessing_n_cores = int(
+                    os.environ.get("gbm_bkg_multiprocessing_n_cores", cpu_count())
+                )
+
+                with Pool(multiprocessing_n_cores) as pool:
+                    responses = pool.map(get_response, self._points)
+
                 responses = self._add_response_echan(np.array(responses))
 
-        self._response_array = np.array(responses)
+            else:
+                with progress_bar(
+                    len(self._points),
+                    title="Calculating response on a grid around detector {}. "
+                    "This shows the progress of rank 0. All other should be about the same.".format(
+                        self.detector
+                    ),
+                ) as p:
+                    for point in self._points:
+                        # get the response of every point
+                        matrix = self._response(
+                            point[0], point[1], point[2], DRM
+                        ).matrix
+                        responses.append(matrix.T)
+                        p.increase()
+                    responses = self._add_response_echan(np.array(responses))
+            response_times.append(np.array(responses))
+        self._response_array = np.array(response_times)
 
     def _fibonacci_sphere(self, samples=1):
         """
