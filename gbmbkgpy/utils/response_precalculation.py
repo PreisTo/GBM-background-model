@@ -25,7 +25,7 @@ try:
 
     else:
         using_mpi = False
-except:
+except Exception:
     using_mpi = False
 
 if using_mpi:
@@ -37,7 +37,7 @@ else:
 
         using_multiprocessing = True
 
-    except:
+    except Exception:
         using_multiprocessing = False
 
 valid_det_names = [
@@ -133,12 +133,12 @@ class Det_Response_Precalculation(object):
 
         if trigger is None:
             assert (
-                type(dates[0]) == str and len(dates[0]) == 6
+                isinstance(dates[0], str) and len(dates[0]) == 6
             ), "Day must be a string of the format YYMMDD, but is {}".format(dates[0])
 
-        assert type(Ngrid) == int, "Ngrid has to be an integer, but is a {}.".format(
-            type(Ngrid)
-        )
+        assert isinstance(
+            Ngrid, int
+        ), "Ngrid has to be an integer, but is a {}.".format(type(Ngrid))
 
         if Ebin_edge_incoming is not None:
             assert (
@@ -250,12 +250,43 @@ class Det_Response_Precalculation(object):
                 edge_stop = f["EBOUNDS"].data["E_MAX"]
 
             self._Ebin_out_edge = np.append(edge_start, edge_stop[-1])
+            response_cache_file = os.path.join(
+                get_path_of_external_data_dir(),
+                "response",
+                data_type,
+                dates[0],
+                f"effective_response_{Ngrid}_{det}.hd5",
+            )
 
-            # Create the points on the unit sphere
-            self._points = self._fibonacci_sphere(samples=Ngrid)
+            if file_existing_and_readable(response_cache_file):
 
-            # Calculate the reponse for all points on the unit sphere
-            self._calculate_responses()
+                print(f"Load response cache for detector {det}")
+
+                self._load_response_cache(response_cache_file)
+
+                # self._get_needed_responses()
+
+            else:
+
+                print(
+                    f"No response cache existing for detector {det}. We will build it from scratch!"
+                )
+
+                # Create the points on the unit sphere
+                self._points = np.array(self._fibonacci_sphere(samples=Ngrid))
+
+                # Calculate the reponse for all points on the unit sphere
+                self._calculate_responses()
+
+                if using_mpi:
+
+                    if rank == 0:
+
+                        self._save_response_cache(response_cache_file)
+
+                else:
+
+                    self._save_response_cache(response_cache_file)
 
     @property
     def points(self):
@@ -264,10 +295,6 @@ class Det_Response_Precalculation(object):
     @property
     def Ngrid(self):
         return self._Ngrid
-
-    @property
-    def all_response_array(self):
-        return self._all_response_array
 
     @property
     def response_array(self):
@@ -380,7 +407,7 @@ class Det_Response_Precalculation(object):
             ebin_in_edge = f["ebin_in_edge"][()]
             ebin_out_edge = f["ebin_out_edge"][()]
             points = f["points"][()]
-            all_response_array = f["response_array"][()]
+            response_array = f["response_array"][()]
 
         assert detector == self.detector
         assert det == self.det
@@ -391,7 +418,7 @@ class Det_Response_Precalculation(object):
         assert np.array_equal(ebin_out_edge, self.Ebin_out_edge)
 
         self._points = points
-        self._all_response_array = all_response_array
+        self._response_array = response_array
 
     def _save_response_cache(self, cache_file):
         if_dir_containing_file_not_existing_then_make(cache_file)
@@ -411,16 +438,16 @@ class Det_Response_Precalculation(object):
             f.create_dataset("points", data=self.points, compression="lzf")
 
             f.create_dataset(
-                "response_array", data=self.all_response_array, compression="lzf"
+                "response_array",
+                data=self.response_array.astype("float64"),
+                compression="lzf",
             )
 
     def _get_needed_responses(self):
         """
         Get the needed reponses for this run
         """
-        self._response_array = self._add_response_echan(self._all_response_array)
-        # We do not need this anymore
-        del self._all_response_array
+        self._response_array = self._add_response_echan(self._response_array)
 
     def _add_response_echan(self, response_array):
         """
@@ -459,9 +486,19 @@ class Det_Response_Precalculation(object):
         responses = []
         # Create the DRM object (quaternions and sc_pos are dummy values, not important
         # as we calculate everything in the sat frame
-        dummy_pos_inter = PositionInterpolator(quats=np.array([[0.0745, -0.105, 0.0939, 0.987],[0.0745, -0.105, 0.0939, 0.987]]), 
-                                               sc_pos=np.array([[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6],[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]]) ,
-                                               time=np.array([-1,1]), trigtime=0)
+        dummy_pos_inter = PositionInterpolator(
+            quats=np.array(
+                [[0.0745, -0.105, 0.0939, 0.987], [0.0745, -0.105, 0.0939, 0.987]]
+            ),
+            sc_pos=np.array(
+                [
+                    [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                    [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                ]
+            ),
+            time=np.array([-1, 1]),
+            trigtime=0,
+        )
         DRM = DRMGen(
             dummy_pos_inter,
             self._det,
@@ -621,7 +658,7 @@ class Det_Response_Precalculation(object):
 
                 drm = DRMGen(
                     np.array([0.0745, -0.105, 0.0939, 0.987]),
-                    np.array([-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]),
+                    np.array([-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6]),
                     self._det,
                     self.Ebin_in_edge,
                     mat_type=0,
