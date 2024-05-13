@@ -56,9 +56,9 @@ class PointSrc_free(object):
         self._geom = geometry
 
         self._data_type = self._rsp[self._detectors[0]].data_type
-        
+
         self._echans = echans
-        
+
         if self._data_type == "ctime" or self._data_type == "trigdat":
             echans_mask = []
 
@@ -99,20 +99,19 @@ class PointSrc_free(object):
 
         self._echans_mask = echans_mask
 
-
         Eout_edges = list(self._rsp.values())[0].Ebin_out_edge
-        Ebins = np.zeros((len(Eout_edges)-1,2))
-        Ebins[:,0] = Eout_edges[:-1]
-        Ebins[:,1] = Eout_edges[1:]
+        Ebins = np.zeros((len(Eout_edges) - 1, 2))
+        Ebins[:, 0] = Eout_edges[:-1]
+        Ebins[:, 1] = Eout_edges[1:]
         mi = np.zeros(len(self._echans_mask))
         ma = np.zeros(len(self._echans_mask))
         for i, mask in enumerate(self._echans_mask):
             mi[i] = np.min(np.argwhere(mask))
             ma[i] = np.max(np.argwhere(mask))
         minindex = int(np.min(mi))
-        maxindex = int(np.max(ma)) 
-        self._piv = np.sqrt(Ebins[minindex,0]*Ebins[maxindex,1]) 
-                
+        maxindex = int(np.max(ma))
+        self._piv = np.sqrt(Ebins[minindex, 0] * Ebins[maxindex, 1])
+
         self._time_variation_interp = None
 
         self._calc_det_responses()
@@ -127,7 +126,7 @@ class PointSrc_free(object):
         Returns an array with the poit source response for the times for which the geometry
         was calculated.
         """
-        
+
         return self._ps_response
 
     def set_time_variation_interp(self, interp):
@@ -139,9 +138,9 @@ class PointSrc_free(object):
     def _calc_det_responses(self):
 
         ps_response = {}
-        
+
         for det_idx, det in enumerate(self._detectors):
-        
+
             ps_response[det] = self._response_one_det(det_response=self._rsp[det])
 
         self._ps_response = ps_response
@@ -150,27 +149,27 @@ class PointSrc_free(object):
 
         response_matrix = []
 
-        pos_inter = PositionInterpolator(quats=np.array([self._geom.quaternion[0], self._geom.quaternion[0]]), 
-                                               sc_pos=np.array([self._geom.sc_pos[0],self._geom.sc_pos[0]]) ,
-                                               time=np.array([-1,1]), trigtime=0)
+        pos_inter = PositionInterpolator(
+            quats=np.array([self._geom.quaternion[0], self._geom.quaternion[0]]),
+            sc_pos=np.array([self._geom.sc_pos[0], self._geom.sc_pos[0]]),
+            time=np.array([-1, 1]),
+            trigtime=0,
+        )
         print("###############################")
         print(self.name, self._ra, self._dec)
         d = DRMGen(
             pos_inter,
             det_response.det,
             det_response.Ebin_in_edge,
-            mat_type=0,
+            mat_type=2,
             ebin_edge_out=det_response.Ebin_out_edge,
-            )
+        )
         for j in range(len(self._geom.quaternion)):
             d._quaternions = self._geom.quaternion[j]
             d._sc_pos = self._geom.sc_pos[j]
             d._compute_spacecraft_coordinates()
-            
-            all_response_step = (d
-                .to_3ML_response(self._ra, self._dec)
-                .matrix
-            )
+
+            all_response_step = d.to_3ML_response(self._ra, self._dec).matrix
 
             # sum the responses needed
             response_step = np.zeros(
@@ -307,7 +306,7 @@ class PointSrc_fixed(PointSrc_free):
 
             folded_flux_ps[:, det_idx, :] = np.dot(true_flux_ps, ps_response_det)
 
-        self._folded_flux_ps = self._norm*folded_flux_ps
+        self._folded_flux_ps = self._norm * folded_flux_ps
 
     def _interpolate_ps_rates(self):
 
