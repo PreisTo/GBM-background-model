@@ -307,7 +307,7 @@ class GC_511(GC_fixed):
         g = Gaussian()
         g.mu.value = 511
         g.sigma.value = 1
-        g.F.value = c_tot
+        g.F.value = 10e-3 * c_tot
         return g(E)
 
     def _lorentzian(self, lon, lat):

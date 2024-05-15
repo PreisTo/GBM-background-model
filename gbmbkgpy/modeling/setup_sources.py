@@ -669,7 +669,7 @@ def setup_gc(data, gc_object, saa_object):
     return Source_gc_Continuum
 
 
-def setup_gc_511(data, gc_object, saa_object):
+def setup_gc_511(data, gc_511_object, saa_object):
     """
     Setup galactic center source with fixed spectrum (for now only fixed spectrum available).
     :param data:
@@ -678,15 +678,15 @@ def setup_gc_511(data, gc_object, saa_object):
     :return:
     """
 
-    gc = GlobalFunction("norm_gc_511")
-    gc.set_function_array(gc_object.get_gc_rates(data.time_bins))
-    gc.set_saa_zero(saa_object.saa_mask)
+    gc_511 = GlobalFunction("norm_gc_511")
+    gc_511.set_function_array(gc_511_object.get_gc_rates(data.time_bins))
+    gc_511.set_saa_zero(saa_object.saa_mask)
 
-    gc.integrate_array(data.time_bins)
+    gc_511.integrate_array(data.time_bins)
 
-    Source_gc_Continuum = GlobalSource("galactic_center_511", gc)
+    Source_gc_511_Continuum = GlobalSource("galactic_center_511", gc_511)
 
-    return Source_gc_Continuum
+    return Source_gc_511_Continuum
 
 
 def setup_cgb_free(data, albedo_cgb_object, saa_object, use_numba=True):
