@@ -98,6 +98,7 @@ class GC_fixed:
         )
 
         reconstr_counts = np.dot(weights, counts_response_grid)
+        return reconstr_counts
 
     def _calc_gc_weights(self, occ_mask, det_response):
         """
@@ -301,7 +302,7 @@ class GC_fixed:
 
 class GC_511(GC_fixed):
     def __init__(self, det_responses, geometry):
-        super().__init__(det_responses, geometry)
+        super(GC_511,self).__init__(det_responses, geometry)
 
     def _spectrum(self, E, c_tot=1):
         g = Gaussian()
