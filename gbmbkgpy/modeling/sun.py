@@ -7,7 +7,6 @@ from gbm_drm_gen.drmgen import DRMGen
 import numpy as np
 
 try:
-
     # see if we have mpi and/or are upalsing parallel
 
     from mpi4py import MPI
@@ -20,11 +19,10 @@ try:
         size = comm.Get_size()
 
     else:
-
         using_mpi = False
 except:
-
     using_mpi = False
+
 
 # TODO: Change Sun object for new layout with multi detectors
 class Sun(object):
@@ -102,7 +100,6 @@ class Sun(object):
 
     @property
     def geometry_times(self):
-
         return self._geom.time
 
     @property
@@ -113,16 +110,13 @@ class Sun(object):
         return self._rsp.Ebin_in_edge
 
     def _calc_det_responses(self):
-
         sun_response = {}
 
         for det_idx, det in enumerate(self._detectors):
-
             sun_response[det] = self._response_one_det(det_response=self._rsp[det])
 
         self._sun_response = sun_response
 
-    
     def _response_one_det(self, det_response):
         """
         Funtion that imports and precalculate everything that is needed to get the point source array
@@ -133,10 +127,13 @@ class Sun(object):
         response_matrix = []
 
         sun_positions = self._geom.sun_positions
-        
-        pos_inter = PositionInterpolator(quats=np.array([self._geom.quaternion[0], self._geom.quaternion[0]]), 
-                                               sc_pos=np.array([self._geom.sc_pos[0],self._geom.sc_pos[0]]) ,
-                                               time=np.array([-1,1]), trigtime=0)
+
+        pos_inter = PositionInterpolator(
+            quats=np.array([self._geom.quaternion[0], self._geom.quaternion[0]]),
+            sc_pos=np.array([self._geom.sc_pos[0], self._geom.sc_pos[0]]),
+            time=np.array([-1, 1]),
+            trigtime=0,
+        )
 
         d = DRMGen(
             pos_inter,
@@ -144,16 +141,15 @@ class Sun(object):
             det_response.Ebin_in_edge,
             mat_type=0,
             ebin_edge_out=det_response.Ebin_out_edge,
-            )
+        )
         for j in range(len(self._geom.quaternion)):
             d._quaternions = self._geom.quaternion[j]
             d._sc_pos = self._geom.sc_pos[j]
             d._compute_spacecraft_coordinates()
-            
-            all_response_step = (d
-                .to_3ML_response_direct_sat_coord(sun_positions[j].lon.deg, sun_positions[j].lat.deg)
-                .matrix
-            )
+
+            all_response_step = d.to_3ML_response_direct_sat_coord(
+                sun_positions[j].lon.deg, sun_positions[j].lat.deg
+            ).matrix
 
             # sum the responses needed
             response_step = np.zeros(
@@ -237,7 +233,6 @@ class Sun(object):
         self._folded_flux_sun = folded_flux_sun
 
     def _interpolate_sun_rates(self):
-
         self._interp_rate_sun = interpolate.interp1d(
             self._geom.geometry_times, self._folded_flux_sun, axis=0
         )

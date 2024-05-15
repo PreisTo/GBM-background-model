@@ -40,14 +40,12 @@ class Parameter(object):
         self._normalization = False
 
         for k, v in kwargs.items():
-
             if k.lower() == "normalization":
                 self._normalization = bool(v)
             elif k.lower() == "fixed":
                 self._free = not bool(v)
 
     def __eq__(self, value):
-
         print("here")
         self._set_value(value)
 
@@ -81,7 +79,6 @@ class Parameter(object):
         return self.__repr__()
 
     def _get_value(self):
-
         return self._value
 
     def _set_value(self, value):
@@ -114,11 +111,9 @@ class Parameter(object):
     # Define property "fix"
 
     def _set_fix(self, value=True):
-
         self._free = not value
 
     def _get_fix(self):
-
         return not self._free
 
     fix = property(

@@ -8,7 +8,6 @@ from gbmbkgpy.utils.spectrum import _spec_integral_bb, _spec_integral_pl
 from scipy.interpolate import interpolate
 
 try:
-
     # see if we have mpi and/or are upalsing parallel
 
     from mpi4py import MPI
@@ -27,7 +26,6 @@ try:
         pr = True
         using_mpi = False
 except:
-
     using_mpi = False
     pr = True
 
@@ -56,9 +54,9 @@ class PointSrc_free(object):
         self._geom = geometry
 
         self._data_type = self._rsp[self._detectors[0]].data_type
-        
+
         self._echans = echans
-        
+
         if self._data_type == "ctime" or self._data_type == "trigdat":
             echans_mask = []
 
@@ -99,19 +97,18 @@ class PointSrc_free(object):
 
         self._echans_mask = echans_mask
 
-
         Eout_edges = list(self._rsp.values())[0].Ebin_out_edge
-        Ebins = np.zeros((len(Eout_edges)-1,2))
-        Ebins[:,0] = Eout_edges[:-1]
-        Ebins[:,1] = Eout_edges[1:]
+        Ebins = np.zeros((len(Eout_edges) - 1, 2))
+        Ebins[:, 0] = Eout_edges[:-1]
+        Ebins[:, 1] = Eout_edges[1:]
         mi = np.zeros(len(self._echans_mask))
         ma = np.zeros(len(self._echans_mask))
         for i, mask in enumerate(self._echans_mask):
             mi[i] = np.min(np.argwhere(mask))
             ma[i] = np.max(np.argwhere(mask))
         minindex = int(np.min(mi))
-        maxindex = int(np.max(ma)) 
-        self._piv = np.sqrt(Ebins[minindex,0]*Ebins[maxindex,1]) 
+        maxindex = int(np.max(ma))
+        self._piv = np.sqrt(Ebins[minindex, 0] * Ebins[maxindex, 1])
         print(f"piv energy for point source {name}: {self._piv})")
         self._time_variation_interp = None
 
@@ -136,22 +133,22 @@ class PointSrc_free(object):
         self._time_variation_interp = interp
 
     def _calc_det_responses(self):
-
         ps_response = {}
 
         for det_idx, det in enumerate(self._detectors):
-
             ps_response[det] = self._response_one_det(det_response=self._rsp[det])
 
         self._ps_response = ps_response
 
     def _response_one_det(self, det_response):
-
         response_matrix = []
 
-        pos_inter = PositionInterpolator(quats=np.array([self._geom.quaternion[0], self._geom.quaternion[0]]), 
-                                               sc_pos=np.array([self._geom.sc_pos[0],self._geom.sc_pos[0]]) ,
-                                               time=np.array([-1,1]), trigtime=0)
+        pos_inter = PositionInterpolator(
+            quats=np.array([self._geom.quaternion[0], self._geom.quaternion[0]]),
+            sc_pos=np.array([self._geom.sc_pos[0], self._geom.sc_pos[0]]),
+            time=np.array([-1, 1]),
+            trigtime=0,
+        )
 
         d = DRMGen(
             pos_inter,
@@ -159,16 +156,13 @@ class PointSrc_free(object):
             det_response.Ebin_in_edge,
             mat_type=0,
             ebin_edge_out=det_response.Ebin_out_edge,
-            )
+        )
         for j in range(len(self._geom.quaternion)):
             d._quaternions = self._geom.quaternion[j]
             d._sc_pos = self._geom.sc_pos[j]
             d._compute_spacecraft_coordinates()
-            
-            all_response_step = (d
-                .to_3ML_response(self._ra, self._dec)
-                .matrix
-            )
+
+            all_response_step = d.to_3ML_response(self._ra, self._dec).matrix
 
             # sum the responses needed
             response_step = np.zeros(
@@ -187,7 +181,6 @@ class PointSrc_free(object):
 
     @property
     def name(self):
-
         return self._name
 
 
@@ -268,7 +261,6 @@ class PointSrc_fixed(PointSrc_free):
         ps_rates = np.swapaxes(ps_rates, 2, 3)
 
         if self._time_variation_interp is not None:
-
             time_variation = np.tile(
                 self._time_variation_interp(met),
                 (len(self._echans), len(self._detectors), 1, 1),
@@ -307,7 +299,6 @@ class PointSrc_fixed(PointSrc_free):
         self._folded_flux_ps = folded_flux_ps
 
     def _interpolate_ps_rates(self):
-
         self._interp_rate_ps = interpolate.interp1d(
             self._geom.geometry_times, self._folded_flux_ps, axis=0
         )

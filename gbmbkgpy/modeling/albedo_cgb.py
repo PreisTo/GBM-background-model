@@ -4,7 +4,6 @@ from scipy.interpolate import interpolate
 from gbmbkgpy.utils.progress_bar import progress_bar
 
 try:
-
     # see if we have mpi and/or are upalsing parallel
 
     from mpi4py import MPI
@@ -17,21 +16,18 @@ try:
         size = comm.Get_size()
 
     else:
-
         using_mpi = False
 except:
-
     using_mpi = False
 
 
 class Albedo_CGB_free(object):
     """
     Class that precalulated the response arrays for the Earth Albedo and CGB for all times for which the geometry
-    was calculated. Use this if you want the spectra to be free in the fit (not only normalization) 
+    was calculated. Use this if you want the spectra to be free in the fit (not only normalization)
     """
 
     def __init__(self, det_responses, geometry):
-
         self._detectors = list(det_responses.responses.keys())
         self._echans = det_responses.echans
 
@@ -89,7 +85,7 @@ class Albedo_CGB_free(object):
         """
         # define the opening angle of the earth in degree
         earth_radius = 6371.0
-        fermi_radius = np.sqrt(np.sum(self._geom.sc_pos ** 2, axis=1))
+        fermi_radius = np.sqrt(np.sum(self._geom.sc_pos**2, axis=1))
         horizon_angle = 90 - np.rad2deg(np.arccos(earth_radius / fermi_radius))
 
         min_vis = np.deg2rad(horizon_angle)
@@ -191,8 +187,8 @@ class Albedo_CGB_fixed(Albedo_CGB_free):
 
     def get_earth_rates(self, met):
         """
-        Returns an array with the predicted count rates for the times for which the geometry 
-        was calculated for all energy channels. Assumed an normalization=1 (will be fitted later) 
+        Returns an array with the predicted count rates for the times for which the geometry
+        was calculated for all energy channels. Assumed an normalization=1 (will be fitted later)
         and the fixed spectral parameters defined above.
         """
         earth_rates = self._interp_rate_earth(met)
@@ -208,8 +204,8 @@ class Albedo_CGB_fixed(Albedo_CGB_free):
 
     def get_cgb_rates(self, met):
         """
-        Returns an array with the predicted count rates for the times for which the geometry 
-        was calculated for all energy channels. Assumed an normalization=1 (will be fitted later) 
+        Returns an array with the predicted count rates for the times for which the geometry
+        was calculated for all energy channels. Assumed an normalization=1 (will be fitted later)
         and the fixed spectral parameters defined above.
         """
 
@@ -229,11 +225,19 @@ class Albedo_CGB_fixed(Albedo_CGB_free):
         # This true flux is binned in energy bins as defined in the response object
 
         folded_flux_cgb = np.zeros(
-            (len(self._geom.geometry_times), len(self._detectors), len(self._echans),)
+            (
+                len(self._geom.geometry_times),
+                len(self._detectors),
+                len(self._echans),
+            )
         )
 
         folded_flux_earth = np.zeros(
-            (len(self._geom.geometry_times), len(self._detectors), len(self._echans),)
+            (
+                len(self._geom.geometry_times),
+                len(self._detectors),
+                len(self._echans),
+            )
         )
 
         for det_idx, det in enumerate(self._detectors):
@@ -253,8 +257,8 @@ class Albedo_CGB_fixed(Albedo_CGB_free):
                 true_flux_earth, self._earth_response_sums[det]
             )
 
-        self._folded_flux_cgb = self._norm_cgb*folded_flux_cgb
-        self._folded_flux_earth = self._norm_earth*folded_flux_earth
+        self._folded_flux_cgb = self._norm_cgb * folded_flux_cgb
+        self._folded_flux_earth = self._norm_earth * folded_flux_earth
 
     @property
     def responses(self):

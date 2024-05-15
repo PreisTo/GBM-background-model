@@ -8,7 +8,6 @@ from gbmbkgpy.utils.spectrum import _spec_integral_bb, _spec_integral_pl
 from scipy.interpolate import interpolate
 
 try:
-
     # see if we have mpi and/or are upalsing parallel
 
     from mpi4py import MPI
@@ -27,7 +26,6 @@ try:
         pr = True
         using_mpi = False
 except:
-
     using_mpi = False
     pr = True
 
@@ -136,17 +134,14 @@ class PointSrc_free(object):
         self._time_variation_interp = interp
 
     def _calc_det_responses(self):
-
         ps_response = {}
 
         for det_idx, det in enumerate(self._detectors):
-
             ps_response[det] = self._response_one_det(det_response=self._rsp[det])
 
         self._ps_response = ps_response
 
     def _response_one_det(self, det_response):
-
         response_matrix = []
 
         pos_inter = PositionInterpolator(
@@ -188,7 +183,6 @@ class PointSrc_free(object):
 
     @property
     def name(self):
-
         return self._name
 
 
@@ -270,7 +264,6 @@ class PointSrc_fixed(PointSrc_free):
         ps_rates = np.swapaxes(ps_rates, 2, 3)
 
         if self._time_variation_interp is not None:
-
             time_variation = np.tile(
                 self._time_variation_interp(met),
                 (len(self._echans), len(self._detectors), 1, 1),
@@ -309,7 +302,6 @@ class PointSrc_fixed(PointSrc_free):
         self._folded_flux_ps = self._norm * folded_flux_ps
 
     def _interpolate_ps_rates(self):
-
         self._interp_rate_ps = interpolate.interp1d(
             self._geom.geometry_times, self._folded_flux_ps, axis=0
         )

@@ -9,7 +9,6 @@ import numpy as np
 import numexpr as ne
 
 try:
-
     # see if we have mpi and/or are upalsing parallel
 
     from mpi4py import MPI
@@ -22,10 +21,8 @@ try:
         size = comm.Get_size()
 
     else:
-
         using_mpi = False
 except:
-
     using_mpi = False
 
 import collections
@@ -218,7 +215,6 @@ class SAA_Decay(Function):
         self._out = np.zeros_like(self._time_bins[:, 0])
 
     def _build_decay_function(self):
-
         if self._model == "exponential":
 
             def _decay_function(t0, tstart, tstop, A, saa_decay_constant):
@@ -274,11 +270,9 @@ class SAA_Decay(Function):
         )
 
         if self._det_idx is None:
-
             return np.tile(self._out, (self._nr_detectors, 1)).T
 
         else:
-
             out_matrix = np.zeros((len(self._time_bins[:, 0]), self._nr_detectors))
 
             out_matrix[:, self._det_idx] = self._out
@@ -532,7 +526,6 @@ class GlobalFunctionSpectrumFit(Function):
             )
 
         elif self._spec == "pl":
-
             C = Parameter(
                 coefficient_name + "_norm_pl",
                 initial_value=1.0,
@@ -559,7 +552,6 @@ class GlobalFunctionSpectrumFit(Function):
             )
 
         elif self._spec == "bb+pl":
-
             C_pl = Parameter(
                 coefficient_name + "_norm_pl",
                 initial_value=1.0,
@@ -608,7 +600,6 @@ class GlobalFunctionSpectrumFit(Function):
                 C_pl, index, C_bb, temp, use_numba=use_numba
             )
         elif self._spec == "bb":
-
             C = Parameter(
                 coefficient_name + "_norm_bb",
                 initial_value=1.0,
@@ -635,7 +626,6 @@ class GlobalFunctionSpectrumFit(Function):
                 C, temp, use_numba=use_numba
             )
         else:
-
             raise ValueError(
                 "Spectrum must be bpl, pl or bb+pl at the moment. But is {}".format(
                     self._spec
@@ -643,7 +633,6 @@ class GlobalFunctionSpectrumFit(Function):
             )
 
     def set_dets_echans(self, detectors, echans):
-
         self._detectors = detectors
         self._echans = echans
 
@@ -752,11 +741,9 @@ class GlobalFunctionSpectrumFit(Function):
         self._source_counts[~self._saa_mask] = 0.0
 
     def build_spec_integral(self):
-
         if self._spec == "bpl":
 
             def _integral(e1, e2):
-
                 return _spec_integral_bpl(
                     e1, e2, self._C, self._break_energy, self._index1, self._index2
                 )
@@ -764,13 +751,11 @@ class GlobalFunctionSpectrumFit(Function):
         elif self._spec == "pl":
 
             def _integral(e1, e2):
-
                 return _spec_integral_pl(e1, e2, self._C, self._E_norm, self._index)
 
         elif self._spec == "bb+pl":
 
             def _integral(e1, e2):
-
                 return _spec_integral_bb_pl(
                     e1,
                     e2,
@@ -784,7 +769,6 @@ class GlobalFunctionSpectrumFit(Function):
         elif self._spec == "bb":
 
             def _integral(e1, e2):
-
                 return _spec_integral_bb(e1, e2, self._C, self._temp)
 
         self._spec_integral = _integral
@@ -799,14 +783,12 @@ class GlobalFunctionSpectrumFit(Function):
         :return:
         """
         if self._spec == "bpl":
-
             self._C = parameters[0]
             self._index1 = parameters[1]
             self._index2 = parameters[2]
             self._break_energy = parameters[3]
 
         elif self._spec == "pl":
-
             self._C = parameters[0]
             self._index = parameters[1]
 
@@ -862,7 +844,6 @@ class GlobalFunctionSpectrumFit(Function):
         return self._source_counts
 
     def __call__(self):
-
         return self._evaluate(*self.parameter_value)
 
 
@@ -897,7 +878,6 @@ class BkgModelFunction(GlobalFunction):
             source_counts_raw = source_counts_raw[:, self._echan_mask]
 
         if np.array_equal(self._time_bins, self._source_time_bins):
-
             self._source_counts = source_counts_raw
 
         else:
