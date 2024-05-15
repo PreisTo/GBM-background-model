@@ -93,7 +93,6 @@ class Model(object):
         free_parameters_dictionary = collections.OrderedDict()
 
         for parameter_name, parameter in self._parameters.items():
-
             if parameter.free:
                 free_parameters_dictionary[parameter_name] = parameter
 
@@ -112,7 +111,6 @@ class Model(object):
             self._eff_area_corr = np.ones((1, self._nr_detectors, 1))
             # new eff_area_corr array
             for i, det in enumerate(self._detectors[1:]):
-
                 self._eff_area_corr[0, i + 1, 0] = self.free_parameters[
                     f"eff_area_corr_{det}"
                 ].value
@@ -148,7 +146,6 @@ class Model(object):
         normalization_parameters_dictionary = collections.OrderedDict()
 
         for parameter_name, parameter in self._parameters.items():
-
             if parameter.normalization:
                 normalization_parameters_dictionary[parameter_name] = parameter
 
@@ -170,7 +167,6 @@ class Model(object):
         normalization_parameters_dictionary = collections.OrderedDict()
 
         for parameter_name, parameter in self._parameters.items():
-
             if not parameter.normalization:
                 normalization_parameters_dictionary[parameter_name] = parameter
 
@@ -213,9 +209,7 @@ class Model(object):
             self._fit_spectrum_sources,
             self._transient_sources,
         ]:
-
             for source in sources.values():
-
                 for parameter_name, parameter in source.parameters.items():
                     parameters[parameter_name] = parameter
 
@@ -289,7 +283,6 @@ class Model(object):
         :return:
         """
         for i, continuum_source in enumerate(self._continuum_sources.values()):
-
             for j, parameter in enumerate(continuum_source.parameters.values()):
                 parameter.value = norm_array[i]
 
@@ -300,7 +293,6 @@ class Model(object):
         :return:
         """
         for i, global_source in enumerate(self._global_sources.values()):
-
             for j, parameter in enumerate(global_source.parameters.values()):
                 parameter.value = norm_array[i]
 
@@ -314,70 +306,58 @@ class Model(object):
 
     @property
     def point_sources(self):
-
         return self._point_sources
 
     @property
     def flare_sources(self):
-
         return self._flare_sources
 
     @property
     def continuum_sources(self):
-
         return self._continuum_sources
 
     @property
     def global_sources(self):
-
         return self._global_sources
 
     @property
     def fit_spectrum_sources(self):
-
         return self._fit_spectrum_sources
 
     @property
     def transient_sources(self):
-
         return self._transient_sources
 
     @property
     def saa_sources(self):
-
         return self._saa_sources
 
     @property
     def n_point_sources(self):
-
         return len(self._point_sources)
 
     @property
     def n_flare_sources(self):
-
         return len(self._flare_sources)
 
     @property
     def n_continuum_sources(self):
-
         return len(self._continuum_sources)
 
     @property
     def n_saa_sources(self):
-
         return len(self._saa_sources)
 
     @property
     def n_transient(self):
-
         return len(self._transient_sources)
 
     def get_continuum_counts(self, id, time_bins, saa_mask):
         """
         Get the count of the sources in the self._continuum_sources dict
-        :param id: 
+        :param id:
         :param time_bins:
-        :return: 
+        :return:
         """
         continuum_counts = np.zeros(
             (len(time_bins), self._nr_detectors, self._nr_echans)
@@ -415,7 +395,6 @@ class Model(object):
         echan = np.array([])
         num_params = np.array([])
         for sources in source_list:
-
             for source in sources.values():
                 echan = np.append(echan, source.echan)
                 num_para = 0
@@ -475,12 +454,12 @@ class Model(object):
 
     def get_flare_counts(self, id, time_bins, saa_mask, echan):
         """
-        
+
         :param echan:
         :param saa_mask:
         :param time_bins:
         :param id:
-        :return: 
+        :return:
         """
         source_counts = np.zeros(len(time_bins))
         if list(self._flare_sources.values())[id].echan == echan:
@@ -605,7 +584,6 @@ class Model(object):
         total_counts = np.zeros((len(time_bins), self._nr_detectors, self._nr_echans))
 
         for continuum_source in self._continuum_sources.values():
-
             total_counts[:, :, continuum_source.echan] += continuum_source.get_counts(
                 time_bins=time_bins, bin_mask=bin_mask
             )

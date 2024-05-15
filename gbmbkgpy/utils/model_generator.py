@@ -13,7 +13,7 @@ from gbmbkgpy.utils.response_precalculation import Response_Precalculation
 from gbmbkgpy.modeling.setup_sources import Setup
 from gbmbkgpy.modeling.albedo_cgb import Albedo_CGB_fixed, Albedo_CGB_free
 from gbmbkgpy.modeling.sun import Sun
-from gbmbkgpy.modeling.galactic_center import GC_fixed
+from gbmbkgpy.modeling.galactic_center import GC_fixed, GC_511
 from gbmbkgpy.io.package_data import get_path_of_external_data_dir
 
 try:
@@ -253,6 +253,10 @@ class BackgroundModelGenerator(object):
         else:
             self._gc_obj = None
 
+        if config["setup"]["use_gc_511"]:
+            self._gc_obj_511 = GC_511(self._resp, self._geom)
+        else:
+            self._gc_obj_511 = None
         print_progress("Create Source list...")
 
         self._source_list = Setup(
@@ -265,6 +269,7 @@ class BackgroundModelGenerator(object):
             albedo_cgb_object_free=self._albedo_cgb_obj_free,
             albedo_cgb_object_fixed=self._albedo_cgb_obj_fixed,
             gc_object=self._gc_obj,
+            gc_511_object=self._gc_obj_511,
             use_saa=config["setup"]["use_saa"],
             use_constant=config["setup"]["use_constant"],
             norm_constant=config["setup"]["Constant"]["norm"],
@@ -273,6 +278,7 @@ class BackgroundModelGenerator(object):
             use_earth=config["setup"]["use_earth"],
             use_cgb=config["setup"]["use_cgb"],
             use_gc=config["setup"]["use_gc"],
+            use_gc_511=config["setup"]["use_gc_511"],
             point_source_list=config["setup"]["ps_list"],
             fix_earth=config["setup"]["fix_earth"],
             fix_cgb=config["setup"]["fix_cgb"],
@@ -531,6 +537,8 @@ class BackgroundModelGenerator(object):
 
         if config["setup"]["use_gc"]:
             parameter_bounds["norm_gc"] = config["priors"]["gc"]["norm"]
+        if config["setup"]["use_gc_511"]:
+            parameter_bounds["norm_gc_511"] = config["priors"]["gc_511"]["norm"]
 
         if config["setup"]["use_eff_area_correction"]:
             for det in sorted(config["general"]["detectors"])[1:]:
