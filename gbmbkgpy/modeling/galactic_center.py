@@ -307,15 +307,15 @@ class GC_511(GC_fixed):
     def _spectrum(self, E, c_tot=1):
         g = Gaussian()
         g.mu.value = 511
-        g.sigma.value = 1
-        g.F.value = 10e-3 * c_tot
+        g.sigma.value = 2.5/2.3548
+        g.F.value = c_tot*10e-3
         return g(E)
 
     def _lorentzian(self, lon, lat):
         g2 = Asymm_Gaussian_on_sphere()
         g2.lon0.value = 0
         g2.lat0.value = 0
-        g2.a.value = 8.1
-        g2.e.value = np.sqrt(1 - np.power(7.2 / g2.a.value, 2))
+        g2.a.value = 8.1/2.3548
+        g2.e.value = np.sqrt(1 - np.power((7.2/2.3548) / g2.a.value, 2))
         norm = 3282.806350011743
         return 1 / norm * g2(np.rad2deg(lon), np.rad2deg(lat))
