@@ -55,6 +55,7 @@ def Setup(
     albedo_cgb_object_fixed=None,
     gc_object=None,
     gc_511_object=None,
+    gc_posi_object=None,
     use_saa=False,
     use_constant=True,
     norm_constant=1,
@@ -65,6 +66,7 @@ def Setup(
     use_sun=True,
     use_gc=False,
     use_gc_511=False,
+    use_posi=False,
     point_source_list=[],
     fix_earth=False,
     fix_cgb=False,
@@ -159,6 +161,8 @@ def Setup(
         total_sources.append(setup_gc(data, gc_object, saa_object))
     if use_gc_511:
         total_sources.append(setup_gc_511(data, gc_511_object, saa_object))
+    if use_posi:
+        total_sources.append(setup_posi(data, gc_posi_object, saa_object))
     if point_source_list:
         if len(point_source_list) > 0:
             total_sources.extend(
@@ -687,6 +691,26 @@ def setup_gc_511(data, gc_511_object, saa_object):
     Source_gc_511_Continuum = GlobalSource("galactic_center_511", gc_511)
 
     return Source_gc_511_Continuum
+
+
+def setup_posi(data, gc_posi_object, saa_object):
+    """
+    Setup galactic center source with fixed spectrum (for now only fixed spectrum available).
+    :param data:
+    :param gc_object:
+    :param saa_object:
+    :return:
+    """
+
+    gc_posi = GlobalFunction("norm_positronium")
+    gc_posi.set_function_array(gc_posi_object.get_gc_rates(data.time_bins))
+    gc_posi.set_saa_zero(saa_object.saa_mask)
+
+    gc_posi.integrate_array(data.time_bins)
+
+    Source_gc_posi_Continuum = GlobalSource("galactic_positronium", gc_posi)
+
+    return Source_gc_posi_Continuum
 
 
 def setup_cgb_free(data, albedo_cgb_object, saa_object, use_numba=True):
