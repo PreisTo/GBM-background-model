@@ -321,14 +321,13 @@ def positronium_cont(e, K=1):
 
 class GC_511(GC_fixed):
     def __init__(self, det_responses, geometry):
-        super().__init__(det_responses, geometry)
+        super(GC_511, self).__init__(det_responses, geometry)
 
     def _spectrum(self, E, c_tot=1):
         g = Gaussian()
         g.mu.value = 511
         g.sigma.value = 2.5 / (2 * np.sqrt(2 * np.log(2)))
         g.F.value = 9.1 * 10e-4
-
         return g(E) + 10e-4 * positronium_cont(E, 28.9)
 
     def _lorentzian(self, lon, lat):
