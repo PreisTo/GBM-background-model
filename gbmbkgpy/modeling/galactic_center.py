@@ -5,6 +5,8 @@ import numpy as np
 from scipy.interpolate import interpolate
 from scipy.integrate import dblquad
 from astromodels.functions import Gaussian, Gaussian_on_sphere, Asymm_Gaussian_on_sphere
+import healpy as hp
+from gbmbkgpy.io.package_data import get_path_of_data_file
 
 
 class GC_fixed:
@@ -98,6 +100,7 @@ class GC_fixed:
         )
 
         reconstr_counts = np.dot(weights, counts_response_grid)
+        return reconstr_counts
 
     def _calc_gc_weights(self, occ_mask, det_response):
         """
@@ -299,6 +302,23 @@ class GC_fixed:
         )
 
 
+def positronium_cont(e, K=1):
+    Ec = 511
+    ret = np.zeros_like(e)
+    E = e[e < 511]
+    ret[e <= 511] = (
+        K
+        * (2 / ((np.pi**2 - 9) * Ec))
+        * (
+            (E * (Ec - E)) / (2 * Ec - E) ** 2
+            + ((2 * Ec * (Ec - E)) / (E**2)) * np.log((Ec - E) / Ec)
+            - ((2 * Ec * (Ec - E) ** 2) / ((2 * Ec - E) ** 3)) * np.log((Ec - E) / Ec)
+            + ((2 * Ec - E) / E)
+        )
+    )
+    return ret
+
+
 class GC_511(GC_fixed):
     def __init__(self, det_responses, geometry):
         super().__init__(det_responses, geometry)
@@ -306,15 +326,156 @@ class GC_511(GC_fixed):
     def _spectrum(self, E, c_tot=1):
         g = Gaussian()
         g.mu.value = 511
-        g.sigma.value = 1
-        g.F.value = 10e-3 * c_tot
-        return g(E)
+        g.sigma.value = 2.5 / (2 * np.sqrt(2 * np.log(2)))
+        g.F.value = 9.1 * 10e-4
+
+        return g(E) + 10e-4 * positronium_cont(E, 28.9)
 
     def _lorentzian(self, lon, lat):
-        g2 = Asymm_Gaussian_on_sphere()
-        g2.lon0.value = 0
+
+        g2 = Gaussian_on_sphere()
+        g2.lon0.value = 360 - 0.6
         g2.lat0.value = 0
-        g2.a.value = 8.1
-        g2.e.value = np.sqrt(1 - np.power(7.2 / g2.a.value, 2))
-        norm = 3282.806350011743
-        return 1 / norm * g2(np.rad2deg(lon), np.rad2deg(lat))
+        g2.sigma.value = 3.2 / (2 * np.sqrt(2 * np.log(2)))
+        norm_g2 = 3283.1143242599474
+        wide = Gaussian_on_sphere()
+        wide.lon0.value = 360 - 0.6
+        wide.lat0.value = 0
+        wide.sigma.value = 11.8 / (2 * np.sqrt(2 * np.log(2)))
+        norm_wide = 3287.028709705858
+
+        val = 2.16 * (norm_wide / norm_g2) * g2(
+            np.rad2deg(lon), np.rad2deg(lat)
+        ) + wide(np.rad2deg(lon), np.rad2deg(lat))
+
+        return val
+
+    def _calc_gc_weights(self, occ_mask, det_response):
+        """
+        Returns an array of shape (Ntime, Ngrid) that characterizes how well each gridpoint hits the GC
+        at the specific time
+        """
+
+        # get list of GBMFrame objects for all relevant times
+        gbm_frames = []
+        for time_met in range(len(self._geom.geometry_times)):
+            # Get sc pos and quaternions
+            q1, q2, q3, q4 = self._geom.quaternion[time_met, :]
+            scx, scy, scz = self._geom.sc_pos[time_met, :]
+
+            # Define GBMFrame for the given parameters
+            gbm_frame = GBMFrame(
+                quaternion_1=q1,
+                quaternion_2=q2,
+                quaternion_3=q3,
+                quaternion_4=q4,
+                sc_pos_X=scx,
+                sc_pos_Y=scy,
+                sc_pos_Z=scz,
+            )
+
+            # append transformed frame and Skycoord object to lists
+            gbm_frames.append(gbm_frame)
+
+        # get cartesian coordinates of gridpoints
+        x_val = det_response.points[..., 0]
+        y_val = det_response.points[..., 1]
+        z_val = det_response.points[..., 2]
+        cart_coords_grid = list(zip(x_val, y_val, z_val))
+
+        weights = np.zeros((self._Ntime, self._Ngrid))
+        for time in range(self._Ntime):
+            # get gc in gbm frame and the vectors for (time-dependent) "longitude and latitude axes"
+            gc_center = np.array(
+                SkyCoord(l=0 * u.degree, b=0 * u.degree, frame="galactic")
+                .transform_to(gbm_frames[time])
+                .cartesian.get_xyz()
+            )
+
+            # Points on the unit sphere in gbm_frame
+            gc_l = np.array(
+                SkyCoord(l=45 * u.degree, b=0 * u.degree, frame="galactic")
+                .transform_to(gbm_frames[time])
+                .cartesian.get_xyz()
+            )
+            gc_b = np.array(
+                SkyCoord(l=0 * u.degree, b=45 * u.degree, frame="galactic")
+                .transform_to(gbm_frames[time])
+                .cartesian.get_xyz()
+            )
+            # correct the length to get a right angle between the connection gbm_frame_center->gc_center
+            # and the latitude vector
+            # simple geometry with c=sqrt(b^2+a^2), with b=a=1.
+            gc_l *= np.sqrt(2)
+            gc_b *= np.sqrt(2)
+
+            # get the new axis vectors
+            lon_ax = gc_l - gc_center
+            lat_ax = gc_b - gc_center
+            y_ax = (
+                gc_center  # vector pointing from center of gbm frame to galactic center
+            )
+
+            # construct rotation matrix
+            rot_mat = np.zeros((3, 3))
+            rot_mat[:, 0] = lon_ax
+            rot_mat[:, 1] = y_ax
+            rot_mat[:, 2] = lat_ax
+
+            points_transformed = np.zeros((len(cart_coords_grid), 3))
+            # Transform all points
+            points_transformed = np.dot(cart_coords_grid, rot_mat)
+
+            # get l and b in the new coord system
+            # set up in a way that b=l=0 points towards y-axis
+            mask = points_transformed[:, 2] > 1
+            mask2 = points_transformed[:, 2] < -1
+            points_transformed[:, 2][mask] = 1
+            points_transformed[:, 2][mask2] = -1
+            lat = np.arcsin(points_transformed[:, 2])
+            lon = np.arctan2(points_transformed[:, 0], points_transformed[:, 1])
+
+            # get the weights
+            weight = self._lorentzian(lon, lat)
+            weights[time, ...] = weight / np.sum(weight)
+            # populate weights array with weight
+        # set weight of occulted gridpoints to zero
+        weights[occ_mask] = 0
+
+        # every gridpoint needs to be multiplied with the sr_points factor which is the
+        # area of the unit sphere covered by every point
+        resp_grid_points = det_response.points
+        sr_points = 4 * np.pi / len(resp_grid_points)
+        weights = weights * sr_points
+
+        return weights
+
+    def _calc_gc_rates_one_det(self, det_response):
+        """
+        Returns an array of shape (len(Ntime), len(echans)) with the reconstructed count rates
+        (for the specified detector det) in all the reconstructed energy bins specified by the
+        response_precalculation object for all the Ntime times.
+        :param det_response: response matrix for detector of interest
+        """
+
+        occ_mask = self._calc_earth_occultation_mask(det_response)
+        weights = self._calc_gc_weights(occ_mask, det_response)
+        flux_vec = (
+            (det_response.Ebin_in_edge[1:] - det_response.Ebin_in_edge[:-1])
+            / 6.0
+            * (
+                self._spectrum(det_response.Ebin_in_edge[1:])
+                + self._spectrum(det_response.Ebin_in_edge[:-1])
+                + 4
+                * self._spectrum(
+                    (det_response.Ebin_in_edge[1:] + det_response.Ebin_in_edge[:-1])
+                    / 2.0
+                )
+            )
+        )
+        counts_response_grid = np.dot(
+            np.swapaxes(det_response.response_array, 1, 2), flux_vec
+        )
+
+        reconstr_counts = np.dot(weights, counts_response_grid)
+        return reconstr_counts
