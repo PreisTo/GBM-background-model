@@ -192,8 +192,6 @@ class GC_fixed:
 
             weights[time, ...] = weight / np.sum(weight)
 
-        for i in range(weights.shape[0]):
-            assert np.sum(weights[i]) <= 1, "Weights do not sum to one"
         # set weight of occulted gridpoints to zero
         weights[occ_mask] = 0
 
@@ -327,8 +325,8 @@ class GC_511(GC_fixed):
         g = Gaussian()
         g.mu.value = 511
         g.sigma.value = 2.5 / (2 * np.sqrt(2 * np.log(2)))
-        g.F.value = 9.1 * 10e-4
-        return g(E) + 10e-4 * positronium_cont(E, 28.9)
+        g.F.value = 9.1 
+        return g(E) + positronium_cont(E, 28.9)
 
     def _lorentzian(self, lon, lat):
 
@@ -356,7 +354,7 @@ class GalacticPositronium(GC_fixed):
         super(GalacticPositronium, self).__init__(det_responses, geometry)
 
     def _spectrum(self, E, c_tot=1):
-        return 10e-4 * positronium_cont(E, c_tot)
+        return positronium_cont(E, c_tot)
 
     def _lorentzian(self, lon, lat):
         lon = np.rad2deg(lon)
