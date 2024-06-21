@@ -4,7 +4,12 @@ from gbm_drm_gen.drmgen import DRMGen
 from gbmgeometry import PositionInterpolator
 from gbmbkgpy.io.package_data import get_path_of_data_file
 from gbmbkgpy.utils.progress_bar import progress_bar
-from gbmbkgpy.utils.spectrum import _spec_integral_bb, _spec_integral_pl
+from gbmbkgpy.utils.spectrum import (
+    _spec_integral_bb,
+    _spec_integral_pl,
+    _spectrum_cpl,
+    _spec_integral_cpl,
+)
 from scipy.interpolate import interpolate
 
 try:
@@ -232,8 +237,10 @@ class PointSrc_fixed(PointSrc_free):
 
         # Check if spectral type is valid
         assert (
-            self._spec_type == "bb" or self._spec_type == "pl"
-        ), "Spectral Type must be bb (Blackbody) or pl (Powerlaw)"
+            self._spec_type == "bb"
+            or self._spec_type == "pl"
+            or self._spec_type == "cpl"
+        ), "Spectral Type must be bb (Blackbody) or pl (Powerlaw) or cpl (Cutoff Powerlaw)"
 
         self._norm = spec["norm"]
         # Read spectral params
@@ -244,6 +251,9 @@ class PointSrc_fixed(PointSrc_free):
                 self._pl_index = self._get_swift_pl_index()
             else:
                 self._pl_index = spec["powerlaw_index"]
+        if self._spec_type == "cpl":
+            self._cpl_index = spec["cpl_index"]
+            self._xc = spec["xc"]
 
     def get_ps_rates(self, met):
         """
@@ -319,6 +329,8 @@ class PointSrc_fixed(PointSrc_free):
 
         if self._spec_type == "pl":
             return _spec_integral_pl(e1, e2, 1, self._piv, self._pl_index)
+        if self._spec_type == "cpl":
+            return _spec_integral_cpl(e1, e2, 1, self._xc, self._piv, self._cpl_index)
 
     def _get_swift_pl_index(self):
         """

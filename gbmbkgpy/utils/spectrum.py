@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import numpy as np
+from scipy.integrate import quad
 
 
 try:
@@ -32,6 +33,20 @@ if has_numba:
         )
 
     @njit(cache=True)
+    def _spectrum_cpl(energy, c, xc, piv, index):
+        """
+        Calculates the differential spectra
+        R = c*(energy/piv)**index*exp(-energy/xc)
+        :param energy: energy where to evaluate cpl
+        :param c: C param of cpl
+        :param xc: cutoff energy
+        :param piv: pivot
+        :param index: index of cpl
+        :return: differential cpl evaluation [1/kev*s]
+        """
+        return c * (energy / piv) ** index * np.exp(-energy / xc)
+
+    @njit(cache=True)
     def _spectrum_pl(energy, c, e_norm, index):
         """
         Calculates the differential spectra
@@ -43,9 +58,9 @@ if has_numba:
         """
         # norm to crab
         one_crab = 15.0
-        dp2 = 2-index
-        inv_int_flux = 1.0/(195.0**dp2-14.0**dp2)*dp2
-        return c * one_crab * inv_int_flux *(energy)**-index
+        dp2 = 2 - index
+        inv_int_flux = 1.0 / (195.0**dp2 - 14.0**dp2) * dp2
+        return c * one_crab * inv_int_flux * (energy) ** -index
 
     @njit(cache=True)
     def _spectrum_bb(energy, c, temp):
@@ -57,8 +72,8 @@ if has_numba:
         :param index: index of pl
         :return: differential pl evaluation [1/kev*s]
         """
-        
-        return c * energy ** 2 / (np.expm1(energy / temp))
+
+        return c * energy**2 / (np.expm1(energy / temp))
 
     ##################### Integration of spectra #############################
 
@@ -166,6 +181,11 @@ if has_numba:
             )
         return res
 
+    def _spec_integral_cpl(e1, e2, c, xc, piv, index):
+        res = np.zeros(len(e1))
+        for i in prange(len(e1)):
+            res[i] = quad(_spectrum_cpl, e1[i], e2[i], args=(c, xc, piv, index))[0]
+        return res
 
 else:
     ################################## NUMPY Implementations #################################################
@@ -184,7 +204,7 @@ else:
 
     def _spectrum_bb(energy, c, temp):
 
-        return c * energy ** 2 / (np.expm1(energy / temp))
+        return c * energy**2 / (np.expm1(energy / temp))
 
     ########################## Integration over energy bins ###############################
 
