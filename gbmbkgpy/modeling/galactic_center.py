@@ -193,7 +193,9 @@ class GC_fixed:
             weights[time, ...] = weight / np.sum(weight)
 
         for i in range(weights.shape[0]):
-            assert np.sum(weights[i]) <= 1, "Weights do not sum to one"
+            assert np.isclose(
+                np.sum(weights[i]), 1
+            ), f"Weights do not sum to 1 {np.sum(weights[i])}"
         # set weight of occulted gridpoints to zero
         weights[occ_mask] = 0
 
