@@ -1,5 +1,6 @@
 import yaml
 import pandas as pd
+import numpy as np
 import os
 
 from gbmbkgpy.data.continuous_data import Data
@@ -195,6 +196,7 @@ class BackgroundModelGenerator(object):
             Ngrid=config["response"]["Ngrid"],
             data_type=config["general"]["data_type"],
             simulation=config["general"].get("simulation", False),
+            Ebin_edge_incoming=np.geomspace(6, 2000, 300, dtype=np.float64),
         )
 
         print_progress("Done")
