@@ -839,7 +839,7 @@ def build_point_sources(
                 else:
                     for entry in point_source_list[ps]["spectrum"]:
                         point_sources_dic[f"{ps}_{entry}"] = PointSrc_fixed(
-                            name=row[ps],
+                            name=ps,
                             ra=ra_ps,
                             dec=dec_ps,
                             det_responses=det_responses,
