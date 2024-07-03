@@ -196,7 +196,7 @@ class BackgroundModelGenerator(object):
             Ngrid=config["response"]["Ngrid"],
             data_type=config["general"]["data_type"],
             simulation=config["general"].get("simulation", False),
-            Ebin_edge_incoming=np.geomspace(6, 2000, 300, dtype=np.float64),
+            # Ebin_edge_incoming=np.geomspace(3, 2000, 301, dtype=np.float64),
         )
 
         print_progress("Done")
