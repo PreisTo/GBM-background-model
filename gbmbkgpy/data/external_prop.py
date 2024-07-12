@@ -335,7 +335,7 @@ class ExternalProps(object):
     def _calc_bgo_rates_cspec(self, date, bgo_det):
 
         data_type = "cspec"
-        echans = np.arange(85, 105, 1)
+        echans = np.arange(80,126,1)
 
         if using_mpi:
             if rank == 0:
@@ -450,7 +450,7 @@ class ExternalProps(object):
                 )
 
             self._bgo_0_rate_interp = interpolate.UnivariateSpline(
-                self._bgo_0_times, self._bgo_0_rates, s=1000, k=3
+                self._bgo_0_times, self._bgo_0_rates, s=len(self._bgo_0_times)/2, k=3
             )
 
         if get_b1:
@@ -475,7 +475,7 @@ class ExternalProps(object):
                 )
 
             self._bgo_1_rate_interp = interpolate.UnivariateSpline(
-                self._bgo_1_times, self._bgo_1_rates, s=1000, k=3
+                self._bgo_1_times, self._bgo_1_rates, s=len(self._bgo_1_times)/2, k=3
             )
 
     def _build_acd_cr_approximation(self, dates):
