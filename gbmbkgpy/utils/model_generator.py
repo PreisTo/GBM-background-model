@@ -99,7 +99,7 @@ class BackgroundModelGenerator(object):
 
         self._mask_source_intervals(config)
 
-    def rsp_from_config_dict(self, config, response=None, geometry=None):
+    def rsp_from_config_dict(self, config, response=None, geometry=None,dets=None):
         """
         Just precalculating and saving the responses
         """
@@ -117,7 +117,7 @@ class BackgroundModelGenerator(object):
 
         if response is None:
 
-            self._precalc_repsonse(config)
+            self._precalc_repsonse(config,dets = dets)
 
         else:
 
@@ -180,7 +180,7 @@ class BackgroundModelGenerator(object):
 
         print_progress("Done")
 
-    def _precalc_repsonse(self, config):
+    def _precalc_repsonse(self, config, dets = None):
         # Create a Response precalculation object, that precalculates the responses on a spherical grid arount the detector.
         # These calculations use the full DRM's and thus include sat. scattering and partial loss of energy by the photons.
         print_progress(
@@ -188,9 +188,10 @@ class BackgroundModelGenerator(object):
                 config["response"]["Ngrid"]
             )
         )
-
+        if dets is None:
+            dets = config["general"]["detectors"]
         self._resp = Response_Precalculation(
-            detectors=config["general"]["detectors"],
+            detectors=dets,
             echans=config["general"]["echans"],
             dates=config["general"]["dates"],
             Ngrid=config["response"]["Ngrid"],
