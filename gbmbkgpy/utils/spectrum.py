@@ -44,6 +44,10 @@ if has_numba:
         :param index: index of cpl
         :return: differential cpl evaluation [1/kev*s]
         """
+        def cpl(energy,piv,xc,index):
+            return (energy / piv) ** index * np.exp(-energy / xc)
+        one_crab = 15.0
+        inv_flux = 1.0/np.abs(quad(cpl,14,195,args = (piv,xc,index))[0])
         return c * (energy / piv) ** index * np.exp(-energy / xc)
 
     @njit(cache=True)

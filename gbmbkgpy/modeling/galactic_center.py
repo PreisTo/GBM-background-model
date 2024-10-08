@@ -318,7 +318,7 @@ def positronium_cont(e, K=1):
             + ((2 * Ec - E) / E)
         )
     )
-    return ret
+    return 10e-4*ret
 
 
 class GC_511(GC_fixed):
@@ -329,7 +329,7 @@ class GC_511(GC_fixed):
         g = Gaussian()
         g.mu.value = 511
         g.sigma.value = 2.5 / (2 * np.sqrt(2 * np.log(2)))
-        g.F.value = 9.1
+        g.F.value =10e-4* 9.1
         return g(E) + positronium_cont(E, 28.9)
 
     def _lorentzian(self, lon, lat):
