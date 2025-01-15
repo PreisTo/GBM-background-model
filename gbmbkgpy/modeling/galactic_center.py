@@ -354,7 +354,7 @@ class GC_511(GC_fixed):
 
 class GalacticPositronium(GC_fixed):
     def __init__(self, det_responses, geometry):
-        self._map = hp.read_map(get_path_of_data_file("gc_maps", "co_map.fits"))
+        self._map = hp.read_map(get_path_of_data_file("gc_maps", "nir_240.fits"))
         super(GalacticPositronium, self).__init__(det_responses, geometry)
 
     def _spectrum(self, E, c_tot=1):
