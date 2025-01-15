@@ -27,6 +27,8 @@ from gbmbkgpy.io.package_data import (
     get_path_of_data_file,
 )
 from gbmbkgpy.utils.select_pointsources import SelectPointsources
+import astropy.utils.data as astro_data
+from astroquery.simbad import Simbad
 
 # see if we have mpi and/or are upalsing parallel
 try:
@@ -822,33 +824,36 @@ def build_point_sources(
 
                 break
         if not found:
-            try:
-                posi_ps = get_icrs_coordinates(ps)
-                ra_ps = float(posi_ps.ra.deg)
-                dec_ps = float(posi_ps.dec.deg)
-                if not point_source_list[ps]["fixed"]:
-                    point_sources_dic[ps] = PointSrc_free(
+            all_ids = Simbad.query_objectids(str(ps))
+            astro_data.conf.remote_timeout = 20
+            for i in all_ids:
+                try:
+                    posi_ps = get_icrs_coordinates(i[0])
+                    break
+                except Exception as e:
+                    pass
+            ra_ps = float(posi_ps.ra.deg)
+            dec_ps = float(posi_ps.dec.deg)
+            if not point_source_list[ps]["fixed"]:
+                point_sources_dic[ps] = PointSrc_free(
+                    name=ps,
+                    ra=ra_ps,
+                    dec=dec_ps,
+                    det_responses=det_responses,
+                    geometry=geometry,
+                    echans=echans,
+                )
+            else:
+                for entry in point_source_list[ps]["spectrum"]:
+                    point_sources_dic[f"{ps}_{entry}"] = PointSrc_fixed(
                         name=ps,
                         ra=ra_ps,
                         dec=dec_ps,
                         det_responses=det_responses,
                         geometry=geometry,
                         echans=echans,
+                        spec=point_source_list[ps]["spectrum"][entry],
                     )
-
-                else:
-                    for entry in point_source_list[ps]["spectrum"]:
-                        point_sources_dic[f"{ps}_{entry}"] = PointSrc_fixed(
-                            name=ps,
-                            ra=ra_ps,
-                            dec=dec_ps,
-                            det_responses=det_responses,
-                            geometry=geometry,
-                            echans=echans,
-                            spec=point_source_list[ps]["spectrum"][entry],
-                        )
-            except Exception as e:
-                print(e)
 
     # Add the point sources that are given as file with list of point sources
     for i, ps in enumerate(point_source_list):
