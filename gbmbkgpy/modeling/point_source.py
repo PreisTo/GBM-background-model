@@ -252,7 +252,12 @@ class PointSrc_fixed(PointSrc_free):
             else:
                 self._pl_index = spec["powerlaw_index"]
         if self._spec_type == "cpl":
-            self._cpl_index = spec["cpl_index"]
+            if "cpl_index" in spec.keys():
+                self._cpl_index = spec["cpl_index"]
+            elif "powerlaw_index" in spec.keys():
+                self._cpl_index = spec["powerlaw_index"]
+            else:
+                raise NotImplementedError("Must specify index")
             self._xc = spec["xc"]
 
     def get_ps_rates(self, met):
