@@ -76,7 +76,6 @@ class SPECTRUM(FITSExtension):
         stat_err=None,
         is_poisson=False,
     ):
-
         """
         Represents the SPECTRUM extension of a PHAII file.
 
@@ -149,7 +148,6 @@ class PHAII(FITSFile):
         stat_err=None,
         is_poisson=False,
     ):
-
         """
 
         A generic PHAII fits file

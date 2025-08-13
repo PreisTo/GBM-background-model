@@ -219,14 +219,12 @@ class Significance(object):
         o = self.Non
 
         b0 = 0.5 * (
-            np.sqrt(b ** 2 - 2 * sigma_b ** 2 * (b - 2 * o) + sigma_b ** 4)
-            + b
-            - sigma_b ** 2
+            np.sqrt(b**2 - 2 * sigma_b**2 * (b - 2 * o) + sigma_b**4) + b - sigma_b**2
         )
 
         S = sqrt(2) * np.sqrt(
             o * np.log(old_div(o, b0))
-            + old_div((b0 - b) ** 2, (2 * sigma_b ** 2))
+            + old_div((b0 - b) ** 2, (2 * sigma_b**2))
             + b0
             - o
         )

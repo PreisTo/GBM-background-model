@@ -31,6 +31,7 @@ from gbmbkgpy.utils.binner import Rebinner
 
 from gbmbkgpy.utils.spectrum import _spec_integral_bpl, _spec_integral_pl
 
+
 class BackgroundSimulator(object):
     """
     Simulates the background of GBM and writes fits files that can be read by the Background model
@@ -69,13 +70,12 @@ class BackgroundSimulator(object):
             "na",
             "nb",
         ]
-        
+
         self._ep = ExternalProps(
             detectors=config["general"]["detectors"],
             dates=config["general"]["dates"],
             cr_approximation=config["setup"]["cr_approximation"],
         )
-
 
     @classmethod
     def from_config_file(cls, config_yaml):
@@ -119,12 +119,13 @@ class BackgroundSimulator(object):
 
     def _setup_simulation(self):
         self._download_data()
-        
+
         # Setup geometry calculation
         position_interp = PositionInterpolator.from_poshist(self._poshist_file)
 
         step_size = np.floor(
-            (position_interp.time).size / self._config["geometry"]["n_bins_to_calculate"]
+            (position_interp.time).size
+            / self._config["geometry"]["n_bins_to_calculate"]
         ).astype(int)
 
         times_interp = np.append(
@@ -238,7 +239,7 @@ class BackgroundSimulator(object):
 
     def run(self):
         self._setup_simulation()
-        
+
         self._simulate_background()
 
         self._counts_detectors = self._counts_background
@@ -256,9 +257,9 @@ class BackgroundSimulator(object):
                 counts_sum = np.zeros((len(self._time_bins), len(self._echans)))
 
                 # Simulate CGB and Albedo
-                if self._config["setup"].get("use_earth", False) or self._config["setup"].get(
-                    "use_cgb", False
-                ):
+                if self._config["setup"].get("use_earth", False) or self._config[
+                    "setup"
+                ].get("use_cgb", False):
 
                     counts_earth, counts_cgb = self._simulate_albedo_cgb(
                         det_idx=det_idx,
@@ -269,55 +270,64 @@ class BackgroundSimulator(object):
 
                     if self._config["setup"].get("use_earth", False):
 
-                        print(f"Added Earth Albedo with a total of {np.sum(counts_earth)} counts for detector {det_idx}")
-                        
+                        print(
+                            f"Added Earth Albedo with a total of {np.sum(counts_earth)} counts for detector {det_idx}"
+                        )
+
                         counts_sum += counts_earth
 
                     if self._config["setup"].get("use_cgb", False):
 
-                        print(f"Added CGB with a total of {np.sum(counts_cgb)} counts for detector {det_idx}")
+                        print(
+                            f"Added CGB with a total of {np.sum(counts_cgb)} counts for detector {det_idx}"
+                        )
 
                         counts_sum += counts_cgb
 
                 # Simulate Point Sources
                 if self._config["setup"].get("use_ps", False):
 
-                    for key, point_source in self._config["sources"]["point_sources"].items():
-                        
+                    for key, point_source in self._config["sources"][
+                        "point_sources"
+                    ].items():
+
                         counts = self._simulate_pointsource(
                             det_idx=det_idx,
                             ra=point_source["ra"],
                             dec=point_source["dec"],
                             spectrum=point_source["spectrum"],
                         )
-                        #import matplotlib.pyplot as plt
-                        #plt.plot(self._time_bins[:,0], counts[:,20])
-                        #plt.savefig(f"sim_ps_plot_{key}.pdf")
-                        #print(f"Added Point Source {key} with a total of {np.sum(counts)} counts for detector {det_idx}")
-                        
+                        # import matplotlib.pyplot as plt
+                        # plt.plot(self._time_bins[:,0], counts[:,20])
+                        # plt.savefig(f"sim_ps_plot_{key}.pdf")
+                        # print(f"Added Point Source {key} with a total of {np.sum(counts)} counts for detector {det_idx}")
+
                         counts_sum += counts
 
                 # Simulate Constant Source
                 if self._config["setup"].get("use_constant", False):
 
-                    
-                    
                     counts = self._simulate_constant(
                         norm=self._config["sources"]["constant"]["norm"]
                     )
-                    print(f"Added Constant Source with a total of {np.sum(counts)} counts for detector {det_idx}")
-                    
+                    print(
+                        f"Added Constant Source with a total of {np.sum(counts)} counts for detector {det_idx}"
+                    )
+
                     counts_sum += counts
 
                 # Simulate Cosmic Rays
                 if self._config["setup"].get("use_cr", False):
 
                     counts = self._simulate_cosmic_rays(
-                        norm=self._config["sources"]["cosmic_rays"]["norm"], cr_approximation=config["setup"]["cr_approximation"], det_idx=det_idx
+                        norm=self._config["sources"]["cosmic_rays"]["norm"],
+                        cr_approximation=config["setup"]["cr_approximation"],
+                        det_idx=det_idx,
                     )
-                    
-                    
-                    print(f"Added CR component with a total of {np.sum(counts)} counts for detector {det_idx}")
+
+                    print(
+                        f"Added CR component with a total of {np.sum(counts)} counts for detector {det_idx}"
+                    )
 
                     counts_sum += counts
 
@@ -447,7 +457,7 @@ class BackgroundSimulator(object):
                 index1=spectrum["index1"],
                 index2=spectrum["index2"],
             )
-        
+
         elif spectrum["model"] == "sum_broken_powerlaw":
 
             flux = _spec_integral_bpl(
@@ -475,11 +485,12 @@ class BackgroundSimulator(object):
 
         response_matrix = []
 
-        pos_inter = PositionInterpolator(quats=np.array([self._quaternions[0],
-                                                         self._quaternions[0]]), 
-                                               sc_pos=np.array([self._sc_positions[0],
-                                                                self._sc_positions[0]]) ,
-                                               time=np.array([-1,1]), trigtime=0)
+        pos_inter = PositionInterpolator(
+            quats=np.array([self._quaternions[0], self._quaternions[0]]),
+            sc_pos=np.array([self._sc_positions[0], self._sc_positions[0]]),
+            time=np.array([-1, 1]),
+            trigtime=0,
+        )
 
         d = DRMGen(
             pos_inter,
@@ -487,19 +498,14 @@ class BackgroundSimulator(object):
             self._ebin_in_edge,
             mat_type=0,
             ebin_edge_out=self._ebin_out_edge,
-            occult=True
-            )
+            occult=True,
+        )
 
-        
         for j in range(len(self._quaternions)):
             d._quaternions = self._quaternions[j]
             d._sc_pos = self._sc_positions[j]
             d._compute_spacecraft_coordinates()
-            response_step = (
-                d
-                .to_3ML_response(ra, dec)
-                .matrix.T
-            )
+            response_step = d.to_3ML_response(ra, dec).matrix.T
 
             response_matrix.append(response_step)
 
@@ -507,10 +513,10 @@ class BackgroundSimulator(object):
 
         # Interpolate to time bins of real data file
 
-        #response_matrix_interpolator = interp1d(self._times_interp, response_matrix, axis=0)
-        #count_rates_interp = np.dot(flux, response_matrix_interpolator(self._time_bins))
+        # response_matrix_interpolator = interp1d(self._times_interp, response_matrix, axis=0)
+        # count_rates_interp = np.dot(flux, response_matrix_interpolator(self._time_bins))
 
-        count_rates = np.dot(flux,response_matrix)
+        count_rates = np.dot(flux, response_matrix)
         # Interpolate to time bins of real data file
         count_rates_interpolator = interp1d(self._times_interp, count_rates, axis=0)
 
@@ -561,7 +567,7 @@ class BackgroundSimulator(object):
 
     def _simulate_cosmic_rays(self, norm, cr_approximation="BGO", det_idx=0):
 
-        if cr_approximation=="MCL":
+        if cr_approximation == "MCL":
             lat_time, mc_l = self._get_mcl_from_lat_file()
 
             mc_l_interp = interpolate.interp1d(lat_time, mc_l)
@@ -569,10 +575,10 @@ class BackgroundSimulator(object):
             cr_count_rate = mc_l_interp(self._time_bins)
 
         else:
-            cr_count_rate = self._ep.bgo_cr_approximation(self._time_bins)[:,det_idx]
+            cr_count_rate = self._ep.bgo_cr_approximation(self._time_bins)[:, det_idx]
 
         cr_counts = trapz(cr_count_rate, self._time_bins).T
-        print(cr_counts.shape)    
+        print(cr_counts.shape)
         # Remove vertical movement
         cr_counts[cr_counts > 0] = cr_counts[cr_counts > 0] - np.min(
             cr_counts[cr_counts > 0]
@@ -582,7 +588,7 @@ class BackgroundSimulator(object):
         cr_counts /= np.max(cr_counts)
 
         counts_all_echans = np.tile(cr_counts, (len(self._echans), 1)).T
-        
+
         norm_array = np.array(norm)
 
         assert norm_array.shape in [(), (len(self._echans),)]
@@ -659,7 +665,7 @@ class BackgroundSimulator(object):
         # Now lets seperate the parts of the Earth Albedo and the CGB
         # define the opening angle of the earth in degree
         earth_radius = 6371.0
-        fermi_radius = np.sqrt(np.sum(self._sc_positions ** 2, axis=1))
+        fermi_radius = np.sqrt(np.sum(self._sc_positions**2, axis=1))
         horizon_angle = 90 - np.rad2deg(np.arccos(earth_radius / fermi_radius))
 
         min_vis = np.deg2rad(horizon_angle)
@@ -763,10 +769,22 @@ class BackgroundSimulator(object):
 
             if not using_multiprocessing:
 
-                dummy_pos_inter = PositionInterpolator(quats=np.array([[0.0745, -0.105, 0.0939, 0.987],
-                                                                       [0.0745, -0.105, 0.0939, 0.987]]), 
-                                                       sc_pos=np.array([[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6],[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]]) , time=np.array([-1,1]),
-                                                       trigtime=0)
+                dummy_pos_inter = PositionInterpolator(
+                    quats=np.array(
+                        [
+                            [0.0745, -0.105, 0.0939, 0.987],
+                            [0.0745, -0.105, 0.0939, 0.987],
+                        ]
+                    ),
+                    sc_pos=np.array(
+                        [
+                            [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                            [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                        ]
+                    ),
+                    time=np.array([-1, 1]),
+                    trigtime=0,
+                )
                 DRM = DRMGen(
                     dummy_pos_inter,
                     det_idx,
@@ -800,10 +818,22 @@ class BackgroundSimulator(object):
                     zen = np.arcsin(z) * 180 / np.pi
                     az = np.arctan2(y, x) * 180 / np.pi
 
-                    dummy_pos_inter = PositionInterpolator(quats=np.array([[0.0745, -0.105, 0.0939, 0.987],
-                                                                       [0.0745, -0.105, 0.0939, 0.987]]), 
-                                                       sc_pos=np.array([[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6],[-5.88 * 10 ** 6, -2.08 * 10 ** 6, 2.97 * 10 ** 6]]) , time=np.array([-1,1]),
-                                                       trigtime=0)
+                    dummy_pos_inter = PositionInterpolator(
+                        quats=np.array(
+                            [
+                                [0.0745, -0.105, 0.0939, 0.987],
+                                [0.0745, -0.105, 0.0939, 0.987],
+                            ]
+                        ),
+                        sc_pos=np.array(
+                            [
+                                [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                                [-5.88 * 10**6, -2.08 * 10**6, 2.97 * 10**6],
+                            ]
+                        ),
+                        time=np.array([-1, 1]),
+                        trigtime=0,
+                    )
                     drm = DRMGen(
                         dummy_pos_inter,
                         det_idx,
@@ -932,10 +962,10 @@ class BackgroundSimulator(object):
 
         return lat_time, mc_l
 
-    #def _spectrum_pl(self, energy, e_norm, norm, index):
+    # def _spectrum_pl(self, energy, e_norm, norm, index):
     #    return norm / (energy / e_norm) ** index
 
-    #def _spectrum_int_pl(self, e1, e2, e_norm, norm, index):
+    # def _spectrum_int_pl(self, e1, e2, e_norm, norm, index):
 
     #    """
     #    Calculates the flux of photons between two energies
@@ -953,13 +983,13 @@ class BackgroundSimulator(object):
     #        )
     #    )
 
-    #def _spectrum_bpl(self, energy, norm, break_energy, index1, index2):
+    # def _spectrum_bpl(self, energy, norm, break_energy, index1, index2):
 
     #    return norm / (
     #        (energy / break_energy) ** index1 + (energy / break_energy) ** index2
     #    )
 
-    #def _spec_integral_bpl(self, e1, e2, norm, break_energy, index1, index2):
+    # def _spec_integral_bpl(self, e1, e2, norm, break_energy, index1, index2):
     #    """
     #    Calculates the flux of photons between two energies
     #    :param e1: lower e bound

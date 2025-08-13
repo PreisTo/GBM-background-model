@@ -64,7 +64,7 @@ assert file_existing_and_readable(file_path2)
 data = Data(date, detector, data_type, echan_list)
 
 # Import the expected values of the sum of all mean times and all counts
-with (h5py.File(test_hdf5_path, "r")) as f:
+with h5py.File(test_hdf5_path, "r") as f:
     mean_time_c = f["/data_preparation/cspec_mean_time_sum"][()]
     counts_c = f["/data_preparation/cspec_counts_sum"][()]
     day_start_times_c = f["/data_preparation/cspec_day_start_times_sum"][()]
@@ -121,7 +121,7 @@ assert file_existing_and_readable(file_path2)
 data = Data(date, detector, data_type, echan_list)
 
 # Import the expected values of the sum of all mean times and all counts
-with (h5py.File(test_hdf5_path, "r")) as f:
+with h5py.File(test_hdf5_path, "r") as f:
     mean_time_c = f["/data_preparation/ctime_mean_time_sum"][()]
     counts_c = f["/data_preparation/ctime_counts_sum"][()]
     day_start_times_c = f["/data_preparation/ctime_day_start_times_sum"][()]

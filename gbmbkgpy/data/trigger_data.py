@@ -440,8 +440,8 @@ class TrigData(object):
 
     def mask_invalid_bins(self, geometry_times):
         """
-       This function mask the bins that are out of range for the interpolations
-       """
+        This function mask the bins that are out of range for the interpolations
+        """
 
         self._valid_time_mask = np.logical_and(
             (self._time_bins[:, 0] >= geometry_times[0]),

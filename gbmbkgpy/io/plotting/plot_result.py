@@ -397,9 +397,9 @@ class ResultPlotGenerator(object):
             residual_yerr=residual_errors,
             yerr=None,
             xerr=None,
-            label="Obs. Count Rates"
-            if self.data_styles.get("show_label", True)
-            else None,
+            label=(
+                "Obs. Count Rates" if self.data_styles.get("show_label", True) else None
+            ),
             color=self.data_styles.get("color", "black"),
             alpha=self.data_styles.get("alpha", 0.6),
             show_data=self.show_data,
@@ -509,19 +509,27 @@ class ResultPlotGenerator(object):
                         {
                             "data": rebinned_source_counts
                             / self._rebinned_time_bin_widths,
-                            "label": label
-                            if self.source_styles[style_key].get("show_label", True)
-                            or self.source_styles["use_global"]
-                            else None,
-                            "color": self.source_styles[style_key]["color"]
-                            if not self.source_styles["use_global"]
-                            else None,
-                            "alpha": self.source_styles[style_key]["alpha"]
-                            if not self.source_styles["use_global"]
-                            else None,
-                            "linewidth": self.source_styles[style_key]["linewidth"]
-                            if not self.source_styles["use_global"]
-                            else None,
+                            "label": (
+                                label
+                                if self.source_styles[style_key].get("show_label", True)
+                                or self.source_styles["use_global"]
+                                else None
+                            ),
+                            "color": (
+                                self.source_styles[style_key]["color"]
+                                if not self.source_styles["use_global"]
+                                else None
+                            ),
+                            "alpha": (
+                                self.source_styles[style_key]["alpha"]
+                                if not self.source_styles["use_global"]
+                                else None
+                            ),
+                            "linewidth": (
+                                self.source_styles[style_key]["linewidth"]
+                                if not self.source_styles["use_global"]
+                                else None
+                            ),
                             "sort_idx": sort_idx,
                         }
                     )

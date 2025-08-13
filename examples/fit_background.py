@@ -170,7 +170,8 @@ stop_fit = datetime.now()
 start_export = datetime.now()
 
 data_exporter = DataExporter(
-    model_generator=model_generator, best_fit_values=minimizer.best_fit_values,
+    model_generator=model_generator,
+    best_fit_values=minimizer.best_fit_values,
 )
 
 result_file_name = "fit_result_dates_{}_dets_{}_echans_{}.hdf5".format(
@@ -197,7 +198,10 @@ if rank == 0:
             f"bkg_results.txt",
         )
 
-        with open(result_paths_file, "a",) as results_file:
+        with open(
+            result_paths_file,
+            "a",
+        ) as results_file:
             results_file.write(os.path.join(output_dir, result_file_name))
             results_file.write("\n")
 

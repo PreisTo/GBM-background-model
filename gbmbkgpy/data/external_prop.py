@@ -185,8 +185,8 @@ class ExternalProps(object):
     def mc_l(self, met):
         """
         Get MC L for a given MET
-        :param met: 
-        :return: 
+        :param met:
+        :return:
         """
 
         return self._mc_l_interp(met)
@@ -335,7 +335,7 @@ class ExternalProps(object):
     def _calc_bgo_rates_cspec(self, date, bgo_det):
 
         data_type = "cspec"
-        echans = np.arange(80,126,1)
+        echans = np.arange(80, 126, 1)
 
         if using_mpi:
             if rank == 0:
@@ -450,7 +450,7 @@ class ExternalProps(object):
                 )
 
             self._bgo_0_rate_interp = interpolate.UnivariateSpline(
-                self._bgo_0_times, self._bgo_0_rates, s=len(self._bgo_0_times)/2, k=3
+                self._bgo_0_times, self._bgo_0_rates, s=len(self._bgo_0_times) / 2, k=3
             )
 
         if get_b1:
@@ -475,7 +475,7 @@ class ExternalProps(object):
                 )
 
             self._bgo_1_rate_interp = interpolate.UnivariateSpline(
-                self._bgo_1_times, self._bgo_1_rates, s=len(self._bgo_1_times)/2, k=3
+                self._bgo_1_times, self._bgo_1_rates, s=len(self._bgo_1_times) / 2, k=3
             )
 
     def _build_acd_cr_approximation(self, dates):
@@ -487,30 +487,32 @@ class ExternalProps(object):
         :param det: NaI detector
         """
 
-        assert "ACD_DATA" in os.environ, "To use the LAT ACD cosmic ray approximation you"\
-            " must specify the folder with the LAT ACD data hdf5"\
+        assert "ACD_DATA" in os.environ, (
+            "To use the LAT ACD cosmic ray approximation you"
+            " must specify the folder with the LAT ACD data hdf5"
             " files in your system environment variables as ACD_DATA."
+        )
 
         dir_path = os.environ["ACD_DATA"]
 
         met_start, met_stop = self._start_stop_time(dates)
 
-        with h5py.File(os.path.join(dir_path, "2018_sideA_clean.h5"), "r") as f:
+        with h5py.File(os.path.join(dir_path, "2018_sideA.h5"), "r") as f:
             timesA = f["timestamps"][()]
             countsA = f["counts"][()]
             deltatA = f["delta_t"][()]
 
-        with h5py.File(os.path.join(dir_path, "2018_sideB_clean.h5"), "r") as f:
+        with h5py.File(os.path.join(dir_path, "2018_sideB.h5"), "r") as f:
             timesB = f["timestamps"][()]
             countsB = f["counts"][()]
             deltatB = f["delta_t"][()]
 
-        with h5py.File(os.path.join(dir_path, "2018_sideC_clean.h5"), "r") as f:
+        with h5py.File(os.path.join(dir_path, "2018_sideC.h5"), "r") as f:
             timesC = f["timestamps"][()]
             countsC = f["counts"][()]
             deltatC = f["delta_t"][()]
 
-        with h5py.File(os.path.join(dir_path, "2018_sideD_clean.h5"), "r") as f:
+        with h5py.File(os.path.join(dir_path, "2018_sideD.h5"), "r") as f:
             timesD = f["timestamps"][()]
             countsD = f["counts"][()]
             deltatD = f["delta_t"][()]

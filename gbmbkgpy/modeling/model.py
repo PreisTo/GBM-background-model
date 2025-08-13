@@ -220,9 +220,9 @@ class Model(object):
         if self._use_eff_area_correction:
             for i in range(self._nr_detectors - 1):
                 try:
-                    parameters[
-                        f"eff_area_corr_{self._detectors[i+1]}"
-                    ] = self._parameters[f"eff_area_corr_{self._detectors[i+1]}"]
+                    parameters[f"eff_area_corr_{self._detectors[i+1]}"] = (
+                        self._parameters[f"eff_area_corr_{self._detectors[i+1]}"]
+                    )
                 except AttributeError:
                     parameters[f"eff_area_corr_{self._detectors[i+1]}"] = Parameter(
                         f"eff_area_corr_{self._detectors[i+1]}",
@@ -233,7 +233,7 @@ class Model(object):
                         mu=1.0,
                         sigma=0.1,
                         normalization=True,
-                        prior="truncated_gaussian"
+                        prior="truncated_gaussian",
                         # prior="uniform"
                     )
 

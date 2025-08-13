@@ -76,7 +76,7 @@ class ResidualPlot(object):
 
                     self._fig = self._data_axis.get_figure()
 
-                except (AttributeError):
+                except AttributeError:
 
                     # the user supplied a list of axes
 

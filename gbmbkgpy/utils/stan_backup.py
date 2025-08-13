@@ -12,7 +12,7 @@ class StanModelConstructor(object):
     def __init__(self, model_generator, profile=False):
 
         self._profile = profile
-        
+
         data = model_generator.data
         model = model_generator.model
 
@@ -21,7 +21,7 @@ class StanModelConstructor(object):
 
         # Eff area correction?
         self._use_eff_area_correction = model._use_eff_area_correction
-        
+
         # How many of which sources?
 
         # Global
@@ -43,7 +43,7 @@ class StanModelConstructor(object):
 
         # SAA
         sources = model.saa_sources
-        if len(sources)>0:
+        if len(sources) > 0:
             self._use_saa = True
             self._dets_saa = model_generator._dets_saa
             if isinstance(self._dets_saa, str):
@@ -54,12 +54,12 @@ class StanModelConstructor(object):
             self._use_saa = False
 
         if self._use_saa:
-            self._num_saa_exits = int(len(sources) / (num_echans*num_dets_saa))
+            self._num_saa_exits = int(len(sources) / (num_echans * num_dets_saa))
         else:
             self._num_saa_exits = 0
-        #if self._num_saa_exits > 0:
+        # if self._num_saa_exits > 0:
         #    self._use_saa = True
-        #else:
+        # else:
         #    self._use_saa = False
 
         # Free spectrum
@@ -77,7 +77,7 @@ class StanModelConstructor(object):
                 self._use_sun = True
             else:
                 self._num_free_ps += 1
-        
+
         if self._num_free_ps > 0:
             self._use_free_ps = True
         else:
@@ -146,7 +146,7 @@ class StanModelConstructor(object):
 
         if self._use_sun:
             main += "\t, matrix base_response_array_sun, vector sun_spec\n"
-            
+
         if self._use_free_ps:
             main += "\t, matrix[] base_response_array_free_ps, vector[] ps_spec\n"
 
@@ -158,11 +158,11 @@ class StanModelConstructor(object):
 
         if self._use_eff_area_correction:
             main += "\t, vector eff_area_array\n"
-            
+
         main += "\t){\n"
-        #if self._profile:                                                                                
+        # if self._profile:
         #    main += "\t\tprofile(\"loglike\"){\n"
-        main += "\t\treturn poisson_lpmf(counts | 0\n" # "\t\treturn poisson_propto_lpmf(counts | 0\n"
+        main += "\t\treturn poisson_lpmf(counts | 0\n"  # "\t\treturn poisson_propto_lpmf(counts | 0\n"
 
         if self._use_saa:
             for i in range(self._num_saa_exits):
@@ -171,17 +171,13 @@ class StanModelConstructor(object):
                     f"(exp(-t_t0[{i+1},start:stop,1].*saa_decay_vec[{i+1}, start:stop])-"
                     f"exp(-t_t0[{i+1},start:stop,2].*saa_decay_vec[{i+1}, start:stop]))\n"
                 )
-                
+
         if self._use_fixed_global_sources:
             for i in range(self._num_fixed_global_sources):
                 if self._use_eff_area_correction:
-                    main += (
-                        f"\t\t\t+eff_area_array[start:stop].*(norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop])\n"
-                    )
+                    main += f"\t\t\t+eff_area_array[start:stop].*(norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop])\n"
                 else:
-                    main += (
-                        f"\t\t\t+norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop]\n"
-                    )
+                    main += f"\t\t\t+norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop]\n"
 
         if self._use_cont_sources:
             for i in range(self._num_cont_sources):
@@ -198,7 +194,7 @@ class StanModelConstructor(object):
                 main += "\t\t\t+eff_area_array[start:stop].*(base_response_array_cgb[start:stop]*cgb_spec)\n"
             else:
                 main += "\t\t\t+base_response_array_cgb[start:stop]*cgb_spec\n"
-                
+
         if self._use_sun:
             if self._use_eff_area_correction:
                 main += "\t\t\t+eff_area_array[start:stop].*(base_response_array_sun[start:stop]*sun_spec)\n"
@@ -212,9 +208,8 @@ class StanModelConstructor(object):
                 else:
                     main += f"\t\t\t+base_response_array_free_ps[{i+1}, start:stop]*ps_spec[{i+1}]\n"
 
-
         main += "\t\t\t);\n"
-        #if self._profile:
+        # if self._profile:
         #    main += "\t\t}\n"
         main += "\t}\n"
 
@@ -323,14 +318,14 @@ class StanModelConstructor(object):
 
         if self._use_eff_area_correction:
             text += "\treal<lower=0.8, upper=1.2> eff_area_corr[num_dets-1];\n"
-            
+
         text = text + "}\n\n"
         return text
 
     def trans_parameter_block(self):
         text = "transformed parameters { \n"
         if self._profile:
-            text+="\tprofile(\"transform_parameter\"){\n"
+            text += '\tprofile("transform_parameter"){\n'
         if self._use_fixed_global_sources:
             text += "\treal norm_fixed[num_fixed_comp] = exp(log_norm_fixed);\n"
 
@@ -356,7 +351,6 @@ class StanModelConstructor(object):
             text += "\treal norm_free_ps[num_free_ps_comp] = exp(log_norm_free_ps);\n"
             text += "\tvector[rsp_num_Ein] ps_spec[num_free_ps_comp];\n"
 
-            
         if self._use_sun:
             text += "\treal norm_sun = exp(log_norm_sun);\n"
             text += "\tvector[rsp_num_Ein] sun_spec;\n"
@@ -364,7 +358,6 @@ class StanModelConstructor(object):
         if self._use_eff_area_correction:
             text += "\tvector[num_data_points] eff_area_array;\n"
 
-            
         if self._use_cont_sources:
             text += (
                 "\tfor (l in 1:num_cont_comp){\n"
@@ -416,8 +409,8 @@ class StanModelConstructor(object):
         text = "model { \n"
 
         if self._profile:
-            text += "\tprofile(\"priors\"){\n"
-        
+            text += '\tprofile("priors"){\n'
+
         # Priors - Fixed at the moment!:
         # TODO Use config file to get the priors!
         if self._use_fixed_global_sources:
@@ -456,7 +449,7 @@ class StanModelConstructor(object):
             )
         if self._profile:
             text += "\t}\n"
-            text += "\tprofile(\"reduce_sum\"){\n" 
+            text += '\tprofile("reduce_sum"){\n'
         # Reduce sum call
         main = "\ttarget += reduce_sum(partial_sum, counts, grainsize\n"
         if self._use_fixed_global_sources:
@@ -479,7 +472,7 @@ class StanModelConstructor(object):
 
         main += "\t);\n"
         if self._profile:
-            main += "\t}\n" 
+            main += "\t}\n"
         text = text + main + "}\n\n"
         return text
 
@@ -761,7 +754,7 @@ class StanDataConstructor(object):
 
         mu_norm_cont = np.zeros((num_cont_sources, self._ndets, self._nechans))
         sigma_norm_cont = np.zeros((num_cont_sources, self._ndets, self._nechans))
-        
+
         for i, s in enumerate(list(self._model.continuum_sources.values())):
             if "constant" in s.name.lower():
                 index = 0
@@ -1101,13 +1094,13 @@ class StanDataConstructor(object):
             data_dict["sigma_norm_saa"] = self._sigma_norm_saa
             data_dict["mu_decay_saa"] = self._mu_decay_saa
             data_dict["sigma_decay_saa"] = self._sigma_decay_saa
-            
+
         if self._cont_counts is not None:
             data_dict["num_cont_comp"] = 2
             data_dict["base_counts_array_cont"] = self._cont_counts[:, mask_zeros]
             data_dict["mu_norm_cont"] = self._mu_norm_cont
             data_dict["sigma_norm_cont"] = self._sigma_norm_cont
-            
+
         # Stan grainsize for reduced_sum
         if self._threads == 1:
             data_dict["grainsize"] = 1

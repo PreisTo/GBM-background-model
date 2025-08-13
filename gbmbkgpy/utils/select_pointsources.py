@@ -138,7 +138,7 @@ class SelectPointsources(object):
 
         min_date = (Time(min_mjd, format="mjd").isot).split("T")[0]
         max_date = (Time(max_mjd, format="mjd").isot).split("T")[0]
-        
+
         if not (self._time > min_mjd and self._time < max_mjd):
             force = False
 
@@ -509,8 +509,8 @@ class SelectPointsources(object):
         if do_it:
 
             with h5py.File(
-                    self._ps_db_path,
-                    "r",
+                self._ps_db_path,
+                "r",
             ) as h:
                 rates_all = np.zeros(len(h.keys()))
                 errors_all = np.zeros(len(h.keys()))

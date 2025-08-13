@@ -168,9 +168,8 @@ class PointSrc_free(object):
             d._quaternions = self._geom.quaternion[j]
             d._sc_pos = self._geom.sc_pos[j]
             d._compute_spacecraft_coordinates()
-
-            all_response_step = d.to_3ML_response(self._ra, self._dec).matrix
-
+            d.set_location(self._ra, self._dec)
+            all_response_step = d.matrix
             # sum the responses needed
             response_step = np.zeros(
                 (len(self._echans_mask), len(all_response_step[0]))

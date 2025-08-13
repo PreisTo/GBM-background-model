@@ -12,7 +12,7 @@ class StanModelConstructor(object):
     def __init__(self, model_generator, profile=False):
 
         self._profile = profile
-        
+
         data = model_generator.data
         model = model_generator.model
 
@@ -21,7 +21,7 @@ class StanModelConstructor(object):
 
         # Eff area correction?
         self._use_eff_area_correction = model._use_eff_area_correction
-        
+
         # How many of which sources?
 
         # Global
@@ -43,7 +43,7 @@ class StanModelConstructor(object):
 
         # SAA
         sources = model.saa_sources
-        if len(sources)>0:
+        if len(sources) > 0:
             self._use_saa = True
             self._dets_saa = model_generator._dets_saa
             if isinstance(self._dets_saa, str):
@@ -54,12 +54,12 @@ class StanModelConstructor(object):
             self._use_saa = False
 
         if self._use_saa:
-            self._num_saa_exits = int(len(sources) / (num_echans*num_dets_saa))
+            self._num_saa_exits = int(len(sources) / (num_echans * num_dets_saa))
         else:
             self._num_saa_exits = 0
-        #if self._num_saa_exits > 0:
+        # if self._num_saa_exits > 0:
         #    self._use_saa = True
-        #else:
+        # else:
         #    self._use_saa = False
 
         # Free spectrum
@@ -77,7 +77,7 @@ class StanModelConstructor(object):
                 self._use_sun = True
             else:
                 self._num_free_ps += 1
-        
+
         if self._num_free_ps > 0:
             self._use_free_ps = True
         else:
@@ -120,7 +120,7 @@ class StanModelConstructor(object):
 
         with open(save_path, "w") as f:
             f.write(text)
-            
+
     def function_block(self):
         text = "functions { \n"
         text += "\t#include powerlaw.stan\n"
@@ -147,7 +147,7 @@ class StanModelConstructor(object):
 
         if self._use_sun:
             main += "\t, matrix base_response_array_sun, vector sun_spec\n"
-            
+
         if self._use_free_ps:
             main += "\t, matrix[] base_response_array_free_ps, vector[] ps_spec\n"
 
@@ -159,14 +159,14 @@ class StanModelConstructor(object):
 
         if self._use_eff_area_correction:
             main += "\t, vector eff_area_array\n"
-            
+
         main += "\t){\n"
-        #if self._profile:                                                                                
+        # if self._profile:
         #    main += "\t\tprofile(\"loglike\"){\n"
 
-        #poisson_lpmf
-        main += "\t\treturn poisson_lupmf(counts | 0.00000001\n" # "\t\treturn poisson_propto_lpmf(counts | 0\n"
-        
+        # poisson_lpmf
+        main += "\t\treturn poisson_lupmf(counts | 0.00000001\n"  # "\t\treturn poisson_propto_lpmf(counts | 0\n"
+
         if self._use_saa:
             for i in range(self._num_saa_exits):
                 main += (
@@ -178,13 +178,9 @@ class StanModelConstructor(object):
         if self._use_fixed_global_sources:
             for i in range(self._num_fixed_global_sources):
                 if self._use_eff_area_correction:
-                    main += (
-                        f"\t\t\t+eff_area_array[start:stop].*(norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop])\n"
-                    )
+                    main += f"\t\t\t+eff_area_array[start:stop].*(norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop])\n"
                 else:
-                    main += (
-                        f"\t\t\t+norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop]\n"
-                    )
+                    main += f"\t\t\t+norm_fixed[{i+1}]*base_counts_array[{i+1},start:stop]\n"
 
         if self._use_cont_sources:
             for i in range(self._num_cont_sources):
@@ -201,7 +197,7 @@ class StanModelConstructor(object):
                 main += "\t\t\t+eff_area_array[start:stop].*(base_response_array_cgb[start:stop]*cgb_spec)\n"
             else:
                 main += "\t\t\t+base_response_array_cgb[start:stop]*cgb_spec\n"
-                
+
         if self._use_sun:
             if self._use_eff_area_correction:
                 main += "\t\t\t+eff_area_array[start:stop].*(base_response_array_sun[start:stop]*sun_spec)\n"
@@ -216,18 +212,16 @@ class StanModelConstructor(object):
                     main += f"\t\t\t+base_response_array_free_ps[{i+1}, start:stop]*ps_spec[{i+1}]\n"
 
         main += "\t\t\t);\n"
-        #if self._profile:
+        # if self._profile:
         #    main += "\t\t}\n"
         main += "\t}\n"
-
 
         text = text + main
 
         text += "\treal beuermann3(real E, real C, real index1, real index2, real index3, real Eb1, real Eb2, real n1, real n2){\n"
         text += "\t\treturn pow(pow(C*pow(Eb1, -index1)*pow(pow(E/Eb1, n1*index1)+pow(E/Eb1, n1*index2), -1/n1), -n2)+pow(C*pow(Eb1, -index1)*pow(pow(Eb2/Eb1, n1*index1)+pow(Eb2/Eb1, n1*index2), -1/n1)*pow(E/Eb2, -index3), -n2),-1/n2);\n"
         text += "\t}\n"
-        
-        
+
         text += "\treal beuermann2(real E, real C, real index1, real index2, real Eb1, real n1){\n"
         text += "\t\treturn C*pow(pow(E/Eb1, n1*index1)+pow(E/Eb1, n1*index2),-1/n1);\n"
         text += "\t}\n"
@@ -281,7 +275,7 @@ class StanModelConstructor(object):
 
         if self._use_sun:
             text += "\tmatrix[num_echans*num_dets*num_time_bins, rsp_num_Ein] base_response_array_sun;\n"
-            
+
         if self._use_free_cgb:
             text += "\tmatrix[num_echans*num_dets*num_time_bins, rsp_num_Ein] base_response_array_cgb;\n"
 
@@ -296,9 +290,9 @@ class StanModelConstructor(object):
         text = "transformed data { \n"
 
         text += "\tint num_data_points = num_time_bins*num_dets*num_echans;\n"
-        #text += "\treal Enorm = 30.0;\n"
-        #text += "\treal b_cgb = 1.0;\n"
-        #text += "\treal b_earth = 1.0;\n"
+        # text += "\treal Enorm = 30.0;\n"
+        # text += "\treal b_cgb = 1.0;\n"
+        # text += "\treal b_earth = 1.0;\n"
         if self._use_saa:
             text += "\tmatrix[num_data_points,2] t_t0[num_saa_exits];\n"
             text += (
@@ -325,24 +319,23 @@ class StanModelConstructor(object):
             text += "\treal log_norm_saa[num_saa_exits, num_dets_saa, num_echans];\n"
             text += "\treal<lower=0.01,upper=10> decay_saa[num_saa_exits, num_dets_saa, num_echans];\n"
 
-
         if self._use_cont_sources:
             text += "\treal<lower=-6, upper=6> log_norm_cont[num_cont_comp, num_dets, num_echans];\n"
 
         if self._use_free_earth:
-            
+
             text += "\treal<lower=-10, upper=5> log_norm_earth;\n"
             text += "\treal<lower=0, upper=6> beta_earth;\n"
             text += "\treal<lower=0, upper=8> n1_earth;\n"
             text += "\treal<lower=10, upper=100> Eb_earth;\n"
-            #text += "\treal log_norm_earth;\n"
-            #text += "\treal beta_earth;\n"
-            #text += "\treal n1_earth;\n"
-            #text += "\treal Eb_earth;\n"
-            
-            #text += "\treal<lower=0> n1_earth;\n"
-            #text += "\treal<lower=0> Eb_earth;\n"
-            #if True
+            # text += "\treal log_norm_earth;\n"
+            # text += "\treal beta_earth;\n"
+            # text += "\treal n1_earth;\n"
+            # text += "\treal Eb_earth;\n"
+
+            # text += "\treal<lower=0> n1_earth;\n"
+            # text += "\treal<lower=0> Eb_earth;\n"
+            # if True
             #    text += "\treal index_earth1;\n"
             #    text += "\treal index_earth2;\n"
             #    text += "\treal index_earth3;\n"
@@ -351,14 +344,14 @@ class StanModelConstructor(object):
             #    text += "\treal index_earth5;\n"
             #    text += "\treal index_earth6;\n"
             #    text += "\treal index_earth7;\n"
-            #else:
+            # else:
             #    text += "\treal alpha_earth;\n"
             #    text += "\treal Ec_earth;\n"
             #    #text += "\treal<lower=0.1, upper=10> gamma_earth;\n"
-            
-            #text += "\treal Eb_earth;\n"
-            #text += "\tordered[2] indices_earth;\n"
-            #text += "\treal b_earth;\n"
+
+            # text += "\treal Eb_earth;\n"
+            # text += "\tordered[2] indices_earth;\n"
+            # text += "\treal b_earth;\n"
 
         if self._use_free_cgb:
             text += "\treal<lower=-3, upper=3> log_norm_cgb;\n"
@@ -371,13 +364,13 @@ class StanModelConstructor(object):
                 text += "\treal index_cgb5;\n"
                 text += "\treal index_cgb6;\n"
                 text += "\treal index_cgb7;\n"
-                
+
             else:
                 if False:
                     text += "\tordered[2] indices1_cgb;\n"
                     text += "\tordered[2] indices2_cgb;\n"
                     text += "\tordered[2] Ebs_cgb;\n"
-                    #text += "\treal Eb_cgb;\n"
+                    # text += "\treal Eb_cgb;\n"
                     text += "\treal<lower=0> n1;\n"
                     text += "\treal<lower=0> n2;\n"
                     text += "\treal log_norm_cgb2;\n"
@@ -387,64 +380,58 @@ class StanModelConstructor(object):
                         text += "\treal Eb_cgb;\n"
                         text += "\treal<lower=0> n1;\n"
                     else:
-                        
+
                         text += "\treal<lower=0, upper=10> index1_cgb;\n"
                         text += "\treal<lower=0, upper=30> index_change12;\n"
-                        #text += "\treal<lower=0, upper=3> index_change23;\n"
+                        # text += "\treal<lower=0, upper=3> index_change23;\n"
 
-
-                        #text += "\treal<lower=0, upper=10> Eb_change12;\n"
+                        # text += "\treal<lower=0, upper=10> Eb_change12;\n"
                         text += "\treal<lower=5, upper=1000> Eb1_cgb;\n"
-
-
-                        
 
                         # fix this
                         text += "\treal<lower=0, upper=10> n1;\n"
-                        #text += "\treal<lower=0, upper=10> n2;\n"
+                        # text += "\treal<lower=0, upper=10> n2;\n"
 
-                        #text += "\treal index1_cgb;\n"
-                        #text += "\treal index_change12;\n"
-                        #text += "\treal index_change23;\n"
+                        # text += "\treal index1_cgb;\n"
+                        # text += "\treal index_change12;\n"
+                        # text += "\treal index_change23;\n"
 
+                        # text += "\treal Eb_change12;\n"
+                        # text += "\treal Eb1_cgb;\n"
 
-                        #text += "\treal Eb_change12;\n"
-                        #text += "\treal Eb1_cgb;\n"
+                        # text += "\tvector[2] Ebs_cgb;\n"
 
+                        # text += "\treal n1;\n"
+                        # text += "\treal n2;\n"
 
-                        #text += "\tvector[2] Ebs_cgb;\n"
-                        
-                        #text += "\treal n1;\n"
-                        #text += "\treal n2;\n"
-
-                    #text += "\tordered[2] indices_cgb;\n"
-                    #text += "\treal beta_cgb;\n"
-                    #text += "\treal Eb_cgb;\n"
-                    #text += "\treal<lower=0.00001, upper=10> bs_cgb;\n"
+                    # text += "\tordered[2] indices_cgb;\n"
+                    # text += "\treal beta_cgb;\n"
+                    # text += "\treal Eb_cgb;\n"
+                    # text += "\treal<lower=0.00001, upper=10> bs_cgb;\n"
 
             # third powerlaw
-            #text += "\tordered[2] Ebs_cgb;\n" 
-            #text += "\treal third_index_cgb;\n"
+            # text += "\tordered[2] Ebs_cgb;\n"
+            # text += "\treal third_index_cgb;\n"
 
         if self._use_sun:
             text += "\treal log_norm_sun;\n"
             text += "\treal index_sun;\n"
-            
+
         if self._use_free_ps:
-            #text += "\treal log_norm_free_ps[num_free_ps_comp];\n"
+            # text += "\treal log_norm_free_ps[num_free_ps_comp];\n"
             text += "\treal<lower=0, upper=10> index_free_ps[num_free_ps_comp];\n"
             text += "\treal<lower=-5> log_K_free_ps[num_free_ps_comp];\n"
         if self._use_eff_area_correction:
-            #text += "\treal eff_area_corr[num_dets-1];\n"
+            # text += "\treal eff_area_corr[num_dets-1];\n"
             text += "\treal<lower=0, upper=2> eff_area_corr[num_dets-1];\n"
-                        
+
         text = text + "}\n\n"
         return text
 
     def trans_parameter_block(self):
         text = "transformed parameters { \n"
         if self._profile:
-            text+="\tprofile(\"transform_parameter\"){\n"
+            text += '\tprofile("transform_parameter"){\n'
         if self._use_fixed_global_sources:
             text += "\treal norm_fixed[num_fixed_comp] = exp(log_norm_fixed);\n"
 
@@ -468,25 +455,25 @@ class StanModelConstructor(object):
 
             text += "\treal C1_cgb;\n"
             text += "\treal index2_cgb=index1_cgb*(1+index_change12);\n"
-            #text += "\treal index3_cgb=index2_cgb*(1+index_change23);\n"
-            #text += "\treal Eb2_cgb=Eb1_cgb*(1+Eb_change12);\n"
+            # text += "\treal index3_cgb=index2_cgb*(1+index_change23);\n"
+            # text += "\treal Eb2_cgb=Eb1_cgb*(1+Eb_change12);\n"
 
             if False:
                 text += "\treal norm_cgb2 = exp(log_norm_cgb2);\n"
-                #text += "\treal n1=1.5;\n"
-                #text += "\treal n2=1.5;\n"
+                # text += "\treal n1=1.5;\n"
+                # text += "\treal n2=1.5;\n"
                 pass
-            
-            ###############                                                                                                                                                                                       
-            #text += "\treal bs_cgb=1;\n"
+
+            ###############
+            # text += "\treal bs_cgb=1;\n"
             if not True:
                 text += "\treal B = -0.5*(indices_cgb[1]+indices_cgb[2]);\n"
                 text += "\treal M = -0.5*(indices_cgb[2]-indices_cgb[1]);\n"
-                
-                #text += "\treal alpha_cgb = 1.32;\n"
-                #text += "\treal Eb_cgb = 30.0;\n"
-                #text += "\treal B = -0.5*(alpha_cgb+beta_cgb);\n"
-                #text += "\treal M = -0.5*(beta_cgb-alpha_cgb);\n"
+
+                # text += "\treal alpha_cgb = 1.32;\n"
+                # text += "\treal Eb_cgb = 30.0;\n"
+                # text += "\treal B = -0.5*(alpha_cgb+beta_cgb);\n"
+                # text += "\treal M = -0.5*(beta_cgb-alpha_cgb);\n"
                 text += "\treal Mbs = M*bs_cgb;\n"
                 text += "\treal arg_piv = log10(35.0/Eb_cgb)/bs_cgb;\n"
                 text += "\treal ten_pcosh_piv;\n"
@@ -495,21 +482,21 @@ class StanModelConstructor(object):
                 text += "\treal arg1;\n"
                 text += "\treal arg2;\n"
 
-                #text += "\treal norm_third;\n"
-                #text += "\treal arg_piv = log10(35.0/(Ebs_cgb[1]+25))/bs_cgb;\n"
+                # text += "\treal norm_third;\n"
+                # text += "\treal arg_piv = log10(35.0/(Ebs_cgb[1]+25))/bs_cgb;\n"
 
         if self._use_free_ps:
-            #text += "\treal norm_free_ps[num_free_ps_comp] = exp(log_norm_free_ps);\n"
+            # text += "\treal norm_free_ps[num_free_ps_comp] = exp(log_norm_free_ps);\n"
             text += "\treal K_free_ps[num_free_ps_comp] = pow(10, log_K_free_ps);\n"
             text += "\tvector[rsp_num_Ein] ps_spec[num_free_ps_comp];\n"
-            
+
         if self._use_sun:
             text += "\treal norm_sun = exp(log_norm_sun);\n"
             text += "\tvector[rsp_num_Ein] sun_spec;\n"
 
         if self._use_eff_area_correction:
             text += "\tvector[num_data_points] eff_area_array;\n"
-            
+
         if self._use_cont_sources:
             text += (
                 "\tfor (l in 1:num_cont_comp){\n"
@@ -521,34 +508,33 @@ class StanModelConstructor(object):
             )
 
         if self._use_saa:
-                
+
             text += (
                 "\tfor (l in 1:num_saa_exits){\n"
                 "\t\tfor (i in 1:num_dets){\n"
                 "\t\t\tif (dets_saa[i]){\n"
                 "\t\t\t\tfor (j in 1:num_echans){\n"
                 "\t\t\t\t\tfor (k in 1:num_time_bins){\n"
-                "\t\t\t\t\t\tsaa_decay_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = 0.0001*decay_saa[l,dets_saa_all_dets[i],j];\n"#dets_saa_all_dets[i],j];\n"
-                "\t\t\t\t\t\tsaa_norm_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = norm_saa[l,dets_saa_all_dets[i],j];\n"#dets_saa_all_dets[i],j];\n"
+                "\t\t\t\t\t\tsaa_decay_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = 0.0001*decay_saa[l,dets_saa_all_dets[i],j];\n"  # dets_saa_all_dets[i],j];\n"
+                "\t\t\t\t\t\tsaa_norm_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = norm_saa[l,dets_saa_all_dets[i],j];\n"  # dets_saa_all_dets[i],j];\n"
                 "\t\t\t\t\t}\n"
                 "\t\t\t\t}\n"
                 "\t\t\t}\n"
-                
                 "\t\t\telse {\n"
                 "\t\t\t\tfor (j in 1:num_echans){\n"
                 "\t\t\t\t\tfor (k in 1:num_time_bins){\n"
-                "\t\t\t\t\t\tsaa_decay_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = 1.0;\n"#dets_saa_all_dets[i],j];\n"
-                "\t\t\t\t\t\tsaa_norm_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = 0.0;\n"#dets_saa_all_dets[i],j];\n"
+                "\t\t\t\t\t\tsaa_decay_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = 1.0;\n"  # dets_saa_all_dets[i],j];\n"
+                "\t\t\t\t\t\tsaa_norm_vec[l][(k-1)*(num_dets*num_echans)+(i-1)*num_echans+j] = 0.0;\n"  # dets_saa_all_dets[i],j];\n"
                 "\t\t\t\t\t}\n"
                 "\t\t\t\t}\n"
                 "\t\t\t}\n"
                 "\t\t}\n"
                 "\t}\n"
-                #"\tprint(saa_norm_vec);\n"
-                #"\tprint(saa_decay_vec);\n"
+                # "\tprint(saa_norm_vec);\n"
+                # "\tprint(saa_decay_vec);\n"
             )
 
-            #text += (
+            # text += (
 
         if self._use_sun:
             text += (
@@ -557,20 +543,19 @@ class StanModelConstructor(object):
                 "\t}\n"
             )
 
-            
         if self._use_free_ps:
-            #text += (
+            # text += (
             #    "\tfor (j in 1:num_free_ps_comp){\n"
             #    "\t\tfor (i in 1:rsp_num_Ein){\n"
             #    "\t\t\tps_spec[j][i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_free_ps[j]*(pow((Ebins_in[1,i]/35.0), -index_free_ps[j])+pow((Ebins_in[2,i]/35.0), -index_free_ps[j]))/2;\n"
             #    "\t\t}\n\t}\n"
-            #)
+            # )
 
             text += (
                 "\tfor (j in 1:num_free_ps_comp){\n"
                 "\t\tps_spec[j]=integrate_powerlaw_flux(Ebins_in, K_free_ps[j], index_free_ps[j]);\n"
                 "\t}\n"
-                )
+            )
 
         if self._use_free_earth:
             if True:
@@ -580,20 +565,19 @@ class StanModelConstructor(object):
                     "\t}\n"
                 )
 
-                #text += (
+                # text += (
                 #    "\tfor (i in 1:rsp_num_Ein){\n"
                 #    "\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_earth*(1.0/(pow((Ebins_in[1,i]/33.7), -5)+pow((Ebins_in[1,i]/33.7), beta_earth))+1.0/(pow((Ebins_in[2,i]/33.7), -5)+pow((Ebins_in[2,i]/33.7), beta_earth)))/2;\n"
                 #    "\t}\n"
-                #)
+                # )
 
-                
-                #text += (
+                # text += (
                 #    "\tfor (i in 1:rsp_num_Ein){\n"
                 #    "\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_earth*(1.0/(pow((Ebins_in[1,i]/33.7), -5)+pow((Ebins_in[1,i]/33.7), 1.72))+1.0/(pow((Ebins_in[2,i]/33.7), -5)+pow((Ebins_in[2,i]/33.7), 1.72)))/2;\n"
                 #    "\t}\n"
-                #)
-                
-                #text += (
+                # )
+
+                # text += (
                 #    "\tfor (i in 1:rsp_num_Ein){\n"
                 #    "\t\tif (Ebins_in[2,i]<40){"
                 #    "\t\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_earth*(pow((Ebins_in[1,i]/10.0), -index_earth)+pow((Ebins_in[2,i]/10.0), -index_earth))/2;\n"
@@ -602,9 +586,9 @@ class StanModelConstructor(object):
                 #    "\t\t\tearth_spec[i] = 0;"
                 #    "\t\t}\n"
                 #    "\t}\n"
-                #)
-                
-                #text += (
+                # )
+
+                # text += (
                 #    "\tfor (i in 1:rsp_num_Ein){\n"
                 #    "\t\tif (Ebins_in[1,i]<20){"
                 #    "\t\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_earth*(pow((Ebins_in[1,i]/10.0), -index_earth1)+pow((Ebins_in[2,i]/10.0), -index_earth1))/2;\n"
@@ -621,7 +605,7 @@ class StanModelConstructor(object):
                 #    "\t}\n"
                 #    )
 
-                #text += (
+                # text += (
                 #    "\tfor (i in 1:rsp_num_Ein){\n"
                 #    "\t\tif (Ebins_in[1,i]<18){"
                 #    "\t\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_earth*(pow((Ebins_in[1,i]/10.0), -index_earth1)+pow((Ebins_in[2,i]/10.0), -index_earth1))/2;\n"
@@ -646,22 +630,21 @@ class StanModelConstructor(object):
                 #    "\t\t}\n"
                 #    "\t}\n"
                 #    )
-                
+
             else:
                 text += (
-                "\tfor (i in 1:rsp_num_Ein){\n"
-                #"\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_earth*(pow((Ebins_in[1,i]/35.0), -1*indices_earth[1])*pow(1+pow((Ebins_in[1,i]/Eb_earth), (indices_earth[2]-indices_earth[1])/b_earth), -1*b_earth)+pow((Ebins_in[2,i]/35.0), -1*indices_earth[1])*pow(1+pow((Ebins_in[2,i]/Eb_earth), (indices_earth[2]-indices_earth[1])/b_earth), -1*b_earth));\n"
-                #"\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_earth*(pow(Ebins_in[1,i], -alpha_earth)*exp(-Ec_earth/Ebins_in[1,i])+pow(Ebins_in[2,i], -alpha_earth)*exp(-Ec_earth/Ebins_in[2,i]));\n"
-                # gamma=4 fixed
-                "\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_earth*(exp(log(Ebins_in[1,i]/35.0)*(-alpha_earth)-(Ec_earth/Ebins_in[1,i])*4)+exp(log(Ebins_in[2,i]/35.0)*(-alpha_earth)-(Ec_earth/Ebins_in[2,i])*4));\n"
-
-                "\t}\n"
+                    "\tfor (i in 1:rsp_num_Ein){\n"
+                    # "\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_earth*(pow((Ebins_in[1,i]/35.0), -1*indices_earth[1])*pow(1+pow((Ebins_in[1,i]/Eb_earth), (indices_earth[2]-indices_earth[1])/b_earth), -1*b_earth)+pow((Ebins_in[2,i]/35.0), -1*indices_earth[1])*pow(1+pow((Ebins_in[2,i]/Eb_earth), (indices_earth[2]-indices_earth[1])/b_earth), -1*b_earth));\n"
+                    # "\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_earth*(pow(Ebins_in[1,i], -alpha_earth)*exp(-Ec_earth/Ebins_in[1,i])+pow(Ebins_in[2,i], -alpha_earth)*exp(-Ec_earth/Ebins_in[2,i]));\n"
+                    # gamma=4 fixed
+                    "\t\tearth_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_earth*(exp(log(Ebins_in[1,i]/35.0)*(-alpha_earth)-(Ec_earth/Ebins_in[1,i])*4)+exp(log(Ebins_in[2,i]/35.0)*(-alpha_earth)-(Ec_earth/Ebins_in[2,i])*4));\n"
+                    "\t}\n"
                 )
 
         if self._use_free_cgb:
 
             if False:
-                #text += (
+                # text += (
                 #    "\tfor (i in 1:rsp_num_Ein){\n"
                 #    "\t\tif (Ebins_in[2,i]<40){"
                 #    "\t\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_cgb*(pow((Ebins_in[1,i]/10.0), -index_cgb)+pow((Ebins_in[2,i]/10.0), -index_cgb))/2;\n"
@@ -670,9 +653,9 @@ class StanModelConstructor(object):
                 #    "\t\t\tcgb_spec[i] = 0;"
                 #    "\t\t}\n"
                 #    "\t}\n"
-                #)
-                
-                #text += (
+                # )
+
+                # text += (
                 #    "\tfor (i in 1:rsp_num_Ein){\n"
                 #    "\t\tif (Ebins_in[1,i]<20){"
                 #    "\t\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*norm_cgb*(pow((Ebins_in[1,i]/10.0), -index_cgb1)+pow((Ebins_in[2,i]/10.0), -index_cgb1))/2;\n"
@@ -714,7 +697,7 @@ class StanModelConstructor(object):
                     "\t\t\tcgb_spec[i] = norm_cgb*pow((18.0/10.0), -index_cgb1)*pow((23.0/18.0), -index_cgb2)*pow((30.0/23.0), -index_cgb3)*pow((37.0/30.0), -index_cgb4)*pow((45.0/37.0), -index_cgb5)*pow((65.0/45.0), -index_cgb6)*(Ebins_in[2,i]-Ebins_in[1,i])*(pow((Ebins_in[1,i]/65.0), -index_cgb7)+pow((Ebins_in[2,i]/65.0), -index_cgb7))/2;\n"
                     "\t\t}\n"
                     "\t}\n"
-                    )
+                )
 
             else:
                 if True:
@@ -723,40 +706,36 @@ class StanModelConstructor(object):
                         text += (
                             "\tfor (i in 1:rsp_num_Ein){\n"
                             "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(norm_cgb/(pow(Ebs_cgb[1],-indices1_cgb[1])*pow(2.0,(-1.0/n1)))*pow((pow(Ebins_in[1,i],(n1*indices1_cgb[1]))+pow(Ebins_in[1,i],(n1*indices1_cgb[2]))*pow(Ebs_cgb[1],n1*(indices1_cgb[1]-indices1_cgb[2]))),-1.0/n1)+norm_cgb2/(pow(Ebs_cgb[2],-indices2_cgb[1])*pow(2.0,(-1.0/n2)))*pow((pow(Ebins_in[1,i],(n2*indices2_cgb[1]))+pow(Ebins_in[1,i],(n2*indices2_cgb[2]))*pow(Ebs_cgb[2],n2*(indices2_cgb[1]-indices2_cgb[2]))),-1.0/n2)+norm_cgb/(pow(Ebs_cgb[1],-indices1_cgb[1])*pow(2.0,(-1.0/n1)))*pow((pow(Ebins_in[2,i],(n1*indices1_cgb[1]))+pow(Ebins_in[2,i],(n1*indices1_cgb[2]))*pow(Ebs_cgb[1],n1*(indices1_cgb[1]-indices1_cgb[2]))),-1.0/n1)+norm_cgb2/(pow(Ebs_cgb[2],-indices2_cgb[1])*pow(2.0,(-1.0/n2)))*pow((pow(Ebins_in[2,i],(n2*indices2_cgb[1]))+pow(Ebins_in[2,i],(n2*indices2_cgb[2]))*pow(Ebs_cgb[2],n2*(indices2_cgb[1]-indices2_cgb[2]))),-1.0/n2));\n"
-                            "\t}\n")
+                            "\t}\n"
+                        )
                     else:
                         if True:
                             # broken powerlaw with a parametrisation such that norm_cgb gives the flux at the peak and n1 gives curvature of break
                             text += (
-                                "\tC1_cgb=norm_cgb*pow(pow(20.0/Eb1_cgb, n1*index1_cgb)+pow(20.0/Eb1_cgb, n1*index2_cgb),1/n1);\n"#norm_cgb*pow(2,1/n1);\n"
+                                "\tC1_cgb=norm_cgb*pow(pow(20.0/Eb1_cgb, n1*index1_cgb)+pow(20.0/Eb1_cgb, n1*index2_cgb),1/n1);\n"  # norm_cgb*pow(2,1/n1);\n"
                                 "\tfor (i in 1:rsp_num_Ein){\n"
                                 "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(beuermann2(Ebins_in[1,i], C1_cgb, index1_cgb, index2_cgb, Eb1_cgb, n1)+beuermann2(Ebins_in[2,i], C1_cgb, index1_cgb, index2_cgb, Eb1_cgb, n1));\n"
                                 "\t}\n"
-
-                                #"\tC1_cgb=norm_cgb;\n"
-                                #"\tfor (i in 1:rsp_num_Ein){\n"
-                                #"\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(beuermann2(Ebins_in[1,i], C1_cgb, index1_cgb, index2_cgb, Eb1_cgb, 1)+beuermann2(Ebins_in[2,i], C1_cgb, index1_cgb, index2_cgb, Eb1_cgb, 1));\n"
-                                #"\t}\n"
-
-                                
+                                # "\tC1_cgb=norm_cgb;\n"
+                                # "\tfor (i in 1:rsp_num_Ein){\n"
+                                # "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(beuermann2(Ebins_in[1,i], C1_cgb, index1_cgb, index2_cgb, Eb1_cgb, 1)+beuermann2(Ebins_in[2,i], C1_cgb, index1_cgb, index2_cgb, Eb1_cgb, 1));\n"
+                                # "\t}\n"
                             )
                         else:
                             text += (
                                 "\tC1_cgb=norm_cgb*0.05*pow(Eb1_cgb, index1_cgb)*pow(pow(2,n2/n1)+pow(pow(Eb2_cgb/Eb1_cgb, n1*index1_cgb)+pow(Eb2_cgb/Eb1_cgb, n1*index2_cgb),n2/n1)*pow(Eb1_cgb/Eb2_cgb,n2*index3_cgb),1/n2);\n"
-
                                 # use a function here
                                 "\tfor (i in 1:rsp_num_Ein){\n"
                                 "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(beuermann3(Ebins_in[1,i], C1_cgb, index1_cgb, index2_cgb, index3_cgb, Eb1_cgb, Eb2_cgb, n1, n2)+beuermann3(Ebins_in[2,i], C1_cgb, index1_cgb, index2_cgb, index3_cgb, Eb1_cgb, Eb2_cgb, n1, n2));\n"
-                                
                                 "\t}\n"
-                                )
+                            )
 
-                        #text += (
+                        # text += (
                         #    "\tfor (i in 1:rsp_num_Ein){\n"
                         #    "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_cgb*(1/(pow((pow(Ebins_in[1,i],(n1*indices1_cgb[1]))+pow(Ebins_in[1,i],(n1*indices1_cgb[2]))*pow(Eb_cgb,n1*(indices1_cgb[1]-indices1_cgb[2]))),-1.0/n1)+ 1/(pow(Eb_cgb,-indices1_cgb[1])*pow(2.0,(-1.0/n1)))*pow((pow(Ebins_in[2,i],(n1*indices1_cgb[1]))+pow(Ebins_in[2,i],(n1*indices1_cgb[2]))*pow(Eb_cgb,n1*(indices1_cgb[1]-indices1_cgb[2]))),-1.0/n1));\n"
                         #    "\t}\n"
-                        #)
-                        
+                        # )
+
                 else:
                     text += (
                         "\tif (arg_piv < -6.0){\n"
@@ -791,52 +770,52 @@ class StanModelConstructor(object):
                         "\t\t}\n"
                         "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(norm_cgb/ten_pcosh_piv)*(pow(Ebins_in[1,i]/35.0,B)*pow(10., pcosh1)+pow(Ebins_in[2,i]/35.0,B)*pow(10., pcosh2));\n"
                         "\t}\n"
-                        ) 
-                
-                #"\targ1 = log10((Ebs_cgb[2]+25)/(Ebs_cgb[1]+25))/bs_cgb;\n"
-                #"\tif (arg1 < -6.0){\n"
-                #"\t\tpcosh1 = Mbs * (-arg1 - log(2));\n"
-                #"\t}\n"
-                #"\telse if (arg1 > 4.0){\n"
-                #"\t\tpcosh1 = Mbs * (arg1 - log(2));\n"
-                #"\t}\n"
-                #"\telse {\n"
-                #"\t\tpcosh1 = Mbs * log(0.5 * ((exp(arg1) + exp(-arg1))));\n"
-                #"\t}\n"
-                #"\tnorm_third = (norm_cgb/ten_pcosh_piv)*pow((Ebs_cgb[2]+25)/35.0,B)*pow(10., pcosh1);\n"
-                #"\tfor (i in 1:rsp_num_Ein){\n"
-                #"\t\tif (Ebins_in[2,i]<(Ebs_cgb[2]+25)){\n"
-                #"\t\t\targ1 = log10(Ebins_in[1,i]/(Ebs_cgb[1]+25))/bs_cgb;\n"
-                #"\t\t\targ2 = log10(Ebins_in[2,i]/(Ebs_cgb[1]+25))/bs_cgb;\n"
-                #"\t\t\tif (arg1 < -6.0){\n"
-                #"\t\t\t\tpcosh1 = Mbs * (-arg1 - log(2));\n"
-                #"\t\t\t}\n"
-                #"\t\t\telse if (arg1 > 4.0){\n"
-                #"\t\t\t\tpcosh1 = Mbs * (arg1 - log(2));\n"
-                #"\t\t\t}\n"
-                #"\t\t\telse {\n"
-                #"\t\t\t\tpcosh1 = Mbs * log(0.5 * ((exp(arg1) + exp(-arg1))));\n"
-                #"\t\t\t}\n"
-                #"\t\t\tif (arg2 < -6.0){\n"
-                #"\t\t\t\tpcosh2 = Mbs * (-arg2 - log(2));\n"
-                #"\t\t\t}\n"
-                #"\t\t\telse if (arg2 > 4.0){\n"
-                #"\t\t\t\tpcosh2 = Mbs * (arg2 - log(2));\n"
-                #"\t\t\t}\n"
-                #"\t\t\telse {\n"
-                #"\t\t\t\tpcosh2 = Mbs * log(0.5 * ((exp(arg2) + exp(-arg2))));\n"
-                #"\t\t\t}\n"
-                #"\t\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(norm_cgb/ten_pcosh_piv)*(pow(Ebins_in[1,i]/35.0,B)*pow(10., pcosh1)+pow(Ebins_in[2,i]/35.0,B)*pow(10., pcosh2));\n"
-                #"\t\t\tprint(cgb_spec[i]);\n"
-                #"\t\t}\n"
-                #"\t\telse {\n"
-                #"\t\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_third*(pow((Ebins_in[1,i]/(Ebs_cgb[2]+25)), -third_index_cgb)+pow((Ebins_in[2,i]/(Ebs_cgb[2]+25)), -third_index_cgb));\n"
-                #"\t\t}\n"
+                    )
 
-                #"\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_cgb*(pow((Ebins_in[1,i]/35.0), -1*indices_cgb[1])*pow(1+pow((Ebins_in[1,i]/Eb_cgb), (indices_cgb[2]-indices_cgb[1])/b_cgb), -1*b_cgb)+pow((Ebins_in[2,i]/35.0), -1*indices_cgb[1])*pow(1+pow((Ebins_in[2,i]/Eb_cgb), (indices_cgb[2]-indices_cgb[1])/b_cgb), -1*b_cgb));\n"
-                #"\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(norm_cgb/(pow(Ebins_in[1,i]/Eb_cgb, indices_cgb[1])+pow(Ebins_in[1,i]/Eb_cgb, indices_cgb[2]))+norm_cgb/(pow(Ebins_in[2,i]/Eb_cgb, indices_cgb[1])+pow(Ebins_in[2,i]/Eb_cgb, indices_cgb[2])));\n"
-                #"\t}\n"
-                        #)
+                # "\targ1 = log10((Ebs_cgb[2]+25)/(Ebs_cgb[1]+25))/bs_cgb;\n"
+                # "\tif (arg1 < -6.0){\n"
+                # "\t\tpcosh1 = Mbs * (-arg1 - log(2));\n"
+                # "\t}\n"
+                # "\telse if (arg1 > 4.0){\n"
+                # "\t\tpcosh1 = Mbs * (arg1 - log(2));\n"
+                # "\t}\n"
+                # "\telse {\n"
+                # "\t\tpcosh1 = Mbs * log(0.5 * ((exp(arg1) + exp(-arg1))));\n"
+                # "\t}\n"
+                # "\tnorm_third = (norm_cgb/ten_pcosh_piv)*pow((Ebs_cgb[2]+25)/35.0,B)*pow(10., pcosh1);\n"
+                # "\tfor (i in 1:rsp_num_Ein){\n"
+                # "\t\tif (Ebins_in[2,i]<(Ebs_cgb[2]+25)){\n"
+                # "\t\t\targ1 = log10(Ebins_in[1,i]/(Ebs_cgb[1]+25))/bs_cgb;\n"
+                # "\t\t\targ2 = log10(Ebins_in[2,i]/(Ebs_cgb[1]+25))/bs_cgb;\n"
+                # "\t\t\tif (arg1 < -6.0){\n"
+                # "\t\t\t\tpcosh1 = Mbs * (-arg1 - log(2));\n"
+                # "\t\t\t}\n"
+                # "\t\t\telse if (arg1 > 4.0){\n"
+                # "\t\t\t\tpcosh1 = Mbs * (arg1 - log(2));\n"
+                # "\t\t\t}\n"
+                # "\t\t\telse {\n"
+                # "\t\t\t\tpcosh1 = Mbs * log(0.5 * ((exp(arg1) + exp(-arg1))));\n"
+                # "\t\t\t}\n"
+                # "\t\t\tif (arg2 < -6.0){\n"
+                # "\t\t\t\tpcosh2 = Mbs * (-arg2 - log(2));\n"
+                # "\t\t\t}\n"
+                # "\t\t\telse if (arg2 > 4.0){\n"
+                # "\t\t\t\tpcosh2 = Mbs * (arg2 - log(2));\n"
+                # "\t\t\t}\n"
+                # "\t\t\telse {\n"
+                # "\t\t\t\tpcosh2 = Mbs * log(0.5 * ((exp(arg2) + exp(-arg2))));\n"
+                # "\t\t\t}\n"
+                # "\t\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(norm_cgb/ten_pcosh_piv)*(pow(Ebins_in[1,i]/35.0,B)*pow(10., pcosh1)+pow(Ebins_in[2,i]/35.0,B)*pow(10., pcosh2));\n"
+                # "\t\t\tprint(cgb_spec[i]);\n"
+                # "\t\t}\n"
+                # "\t\telse {\n"
+                # "\t\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_third*(pow((Ebins_in[1,i]/(Ebs_cgb[2]+25)), -third_index_cgb)+pow((Ebins_in[2,i]/(Ebs_cgb[2]+25)), -third_index_cgb));\n"
+                # "\t\t}\n"
+
+                # "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*norm_cgb*(pow((Ebins_in[1,i]/35.0), -1*indices_cgb[1])*pow(1+pow((Ebins_in[1,i]/Eb_cgb), (indices_cgb[2]-indices_cgb[1])/b_cgb), -1*b_cgb)+pow((Ebins_in[2,i]/35.0), -1*indices_cgb[1])*pow(1+pow((Ebins_in[2,i]/Eb_cgb), (indices_cgb[2]-indices_cgb[1])/b_cgb), -1*b_cgb));\n"
+                # "\t\tcgb_spec[i] = (Ebins_in[2,i]-Ebins_in[1,i])*0.5*(norm_cgb/(pow(Ebins_in[1,i]/Eb_cgb, indices_cgb[1])+pow(Ebins_in[1,i]/Eb_cgb, indices_cgb[2]))+norm_cgb/(pow(Ebins_in[2,i]/Eb_cgb, indices_cgb[1])+pow(Ebins_in[2,i]/Eb_cgb, indices_cgb[2])));\n"
+                # "\t}\n"
+                # )
 
         if self._use_eff_area_correction:
             text += (
@@ -852,11 +831,9 @@ class StanModelConstructor(object):
                 "\t}\n"
             )
 
-            
         if self._profile:
             text += "\t}\n"
 
-            
         text = text + "}\n\n"
         return text
 
@@ -1012,16 +989,16 @@ class StanModelConstructor(object):
             text += "\t}\n"
         """
         if self._profile:
-            text += "\tprofile(\"priors\"){\n"
-        
+            text += '\tprofile("priors"){\n'
+
         # Priors - Fixed at the moment!:
         # TODO Use config file to get the priors!
         if self._use_fixed_global_sources:
             text += "\tlog_norm_fixed ~ normal(mu_norm_fixed, sigma_norm_fixed);\n"
 
         if self._use_free_earth:
-            
-            #if True:
+
+            # if True:
             #    text += "\tindex_earth1 ~ normal(-5, 0.1);\n"
             #    text += "\tindex_earth2 ~ normal(-2, 0.1);\n"
             #    text += "\tindex_earth3 ~ normal(1, 0.1);\n"
@@ -1029,22 +1006,22 @@ class StanModelConstructor(object):
             #    text += "\tindex_earth5 ~ normal(1.72, 0.1);\n"
             #    text += "\tindex_earth6 ~ normal(1.72, 0.1);\n"
             #    text += "\tindex_earth7 ~ normal(1.72, 0.1);\n"
-            #else:
+            # else:
             #    text += "\talpha_earth ~ normal(1.72, 0.01);\n"
             #    text += "\tEc_earth ~ normal(30,2);\n"
             #    #text += "\tgamma_earth ~ lognormal(0,1);\n"
-            
+
             text += "\tlog_norm_earth ~ normal(-5,3);\n"
             text += "\tbeta_earth ~ normal(1.72, 0.1);\n"
 
             text += "\tn1_earth ~ normal(1.5, 0.3);\n"
             text += "\tEb_earth ~ normal(30,5);\n"
-            
-            #text += "\tEb_earth ~ normal(30,2);\n"
-            #text += "\tindices_earth[1] ~ normal(-5, 0.05);\n"
-            #text += "\tindices_earth[2] ~ normal(1.72, 0.02);\n"
-            #text += "\tb_earth ~ normal(1, 0.1);\n"
-            
+
+            # text += "\tEb_earth ~ normal(30,2);\n"
+            # text += "\tindices_earth[1] ~ normal(-5, 0.05);\n"
+            # text += "\tindices_earth[2] ~ normal(1.72, 0.02);\n"
+            # text += "\tb_earth ~ normal(1, 0.1);\n"
+
         if self._use_free_cgb:
             if False:
                 text += "\tindex_cgb1 ~ normal(1.7, 0.05);\n"
@@ -1061,7 +1038,7 @@ class StanModelConstructor(object):
                     text += "\tindices2_cgb[1] ~ normal(1.32, 0.2);\n"
                     text += "\tindices2_cgb[2] ~ normal(2.88, 0.2);\n"
                     text += "\tEbs_cgb ~ normal(30,0.5);\n"
-                    #text += "\tEb_cgb ~ normal(30,0.5);\n"
+                    # text += "\tEb_cgb ~ normal(30,0.5);\n"
                     text += "\tlog_norm_cgb ~ normal(-3.2,1);\n"
                     text += "\tlog_norm_cgb2 ~ normal(-3.2,1);\n"
                     text += "\tn1 ~ normal(1.5, 0.3);\n"
@@ -1074,49 +1051,48 @@ class StanModelConstructor(object):
                         text += "\tEb_cgb ~ normal(30,5);\n"
                         text += "\tlog_norm_cgb ~ normal(-3.2,1);\n"
 
-                        
                         text += "\tn1 ~ normal(1.5, 0.3);\n"
-                    else:                        
+                    else:
                         text += "\tindex1_cgb ~ normal(1.32, 0.2);\n"
                         text += "\tindex_change12 ~ lognormal(0, 1);\n"
-                        #text += "\tindex_change23 ~ lognormal(0, 1);\n"
+                        # text += "\tindex_change23 ~ lognormal(0, 1);\n"
 
                         text += "\tEb1_cgb ~ normal(30,5);\n"
-                        #text += "\tEb_change12 ~ lognormal(0,1);\n"
-                        
-                        #text += "\tEbs_cgb[1] ~ normal(30,5);\n"
-                        #text += "\tEbs_cgb[2] ~ normal(100,20);\n"
+                        # text += "\tEb_change12 ~ lognormal(0,1);\n"
+
+                        # text += "\tEbs_cgb[1] ~ normal(30,5);\n"
+                        # text += "\tEbs_cgb[2] ~ normal(100,20);\n"
 
                         text += "\tlog_norm_cgb ~ normal(0,0.5);\n"
                         # fix this
                         text += "\tn1 ~ normal(1.5, 0.3);\n"
-                        #text += "\tn2 ~ normal(1.5, 0.3);\n"
-                    #text += "\tindices_cgb[1] ~ normal(1.32, 0.05);\n"
-                    #text += "\tindices_cgb[2] ~ normal(2.88, 0.0001);\n"
-                    #text += "\tbeta_cgb ~ normal(2.88, 0.05);\n"
-                    #text += "\tEb_cgb ~ normal(35,2);\n"
-                    #text += "\tbs_cgb ~ lognormal(0, 1);\n"
-                    #text += "\tlog_norm_cgb ~ normal(-4,2);\n"
+                        # text += "\tn2 ~ normal(1.5, 0.3);\n"
+                    # text += "\tindices_cgb[1] ~ normal(1.32, 0.05);\n"
+                    # text += "\tindices_cgb[2] ~ normal(2.88, 0.0001);\n"
+                    # text += "\tbeta_cgb ~ normal(2.88, 0.05);\n"
+                    # text += "\tEb_cgb ~ normal(35,2);\n"
+                    # text += "\tbs_cgb ~ lognormal(0, 1);\n"
+                    # text += "\tlog_norm_cgb ~ normal(-4,2);\n"
 
-                    #text += "\tEbs_cgb[1] ~ normal(35,2);\n"
-                    #text += "\tEbs_cgb[2] ~ normal(100,20);\n"
-                    #text += "\tthird_index_cgb ~ normal(2.88,0.5);\n"
-                    #text += "\tbs_cgb ~ lognormal(0, 1);\n"
-                    #text += "\tb_cgb ~ normal(1, 0.1);\n"
-                    
+                    # text += "\tEbs_cgb[1] ~ normal(35,2);\n"
+                    # text += "\tEbs_cgb[2] ~ normal(100,20);\n"
+                    # text += "\tthird_index_cgb ~ normal(2.88,0.5);\n"
+                    # text += "\tbs_cgb ~ lognormal(0, 1);\n"
+                    # text += "\tb_cgb ~ normal(1, 0.1);\n"
+
         if self._use_sun:
             text += "\tindex_sun ~ normal(3,1);\n"
             text += "\tlog_norm_sun ~ normal(0,1);\n"
 
         if self._use_free_ps:
             text += "\tindex_free_ps ~ normal(3,1);\n"
-            #text += "\tlog_norm_free_ps ~ normal(0,1);\n"
+            # text += "\tlog_norm_free_ps ~ normal(0,1);\n"
             text += "\tlog_K_free_ps ~ std_normal();\n"
         if self._use_cont_sources:
             text += (
                 "\tfor (d in 1:num_dets){\n"
                 "\t\tfor (g in 1:num_echans){\n"
-                #"\t\t\tlog_norm_cont[:,d,g] ~ normal(mu_norm_cont[:,d,g], sigma_norm_cont[:,d,g]);\n"
+                # "\t\t\tlog_norm_cont[:,d,g] ~ normal(mu_norm_cont[:,d,g], sigma_norm_cont[:,d,g]);\n"
                 "\t\t\tlog_norm_cont[1,d,g] ~ normal(0, 0.1);\n"
                 "\t\t\tlog_norm_cont[2,d,g] ~ std_normal();\n"
                 "\t\t}\n\t}\n"
@@ -1134,31 +1110,30 @@ class StanModelConstructor(object):
                 "\t\t}\n\t}\n"
             )
 
-
-        #text += "\tprint(index_free_ps);\n"
-        #text += "\tprint(log_K_free_ps);\n"
-        #text += "\tprint(K_free_ps);\n"
-        #text += "\tprint(C1_cgb);\n"
-        #text += "\tprint(index1_cgb);\n"
-        #text += "\tprint(index2_cgb);\n"
-        #text += "\tprint(Eb1_cgb);\n"
-        #text += "\tprint(Eb2_cgb);\n"
-        #text += "\tprint(n1);\n"
-        #text += "\tprint(n2);\n"
-        #text += "\tprint(index3_cgb);\n"
-        #text += "\tprint(cgb_spec);\n"
-        #text += "\tprint(earth_spec);\n"
-        #text += "\tprint(ps_spec);\n"
-        #text += "\tprint(log_norm_fixed);\n"
-        #text += "\tprint(norm_fixed);\n"
-        #text += "\tprint(norm_cont_vec);\n"
+        # text += "\tprint(index_free_ps);\n"
+        # text += "\tprint(log_K_free_ps);\n"
+        # text += "\tprint(K_free_ps);\n"
+        # text += "\tprint(C1_cgb);\n"
+        # text += "\tprint(index1_cgb);\n"
+        # text += "\tprint(index2_cgb);\n"
+        # text += "\tprint(Eb1_cgb);\n"
+        # text += "\tprint(Eb2_cgb);\n"
+        # text += "\tprint(n1);\n"
+        # text += "\tprint(n2);\n"
+        # text += "\tprint(index3_cgb);\n"
+        # text += "\tprint(cgb_spec);\n"
+        # text += "\tprint(earth_spec);\n"
+        # text += "\tprint(ps_spec);\n"
+        # text += "\tprint(log_norm_fixed);\n"
+        # text += "\tprint(norm_fixed);\n"
+        # text += "\tprint(norm_cont_vec);\n"
         if self._profile:
             text += "\t}\n"
-            text += "\tprofile(\"reduce_sum\"){\n"
-        
+            text += '\tprofile("reduce_sum"){\n'
+
         # Reduce sum call
         main = "\ttarget += reduce_sum(partial_sum_lpmf, counts, grainsize\n"
-        #main = "\ttarget += partial_sum(counts, 1,size(counts)\n"
+        # main = "\ttarget += partial_sum(counts, 1,size(counts)\n"
         if self._use_fixed_global_sources:
             main += "\t\t, base_counts_array, norm_fixed\n"
 
@@ -1170,7 +1145,7 @@ class StanModelConstructor(object):
 
         if self._use_sun:
             main += "\t\t, base_response_array_sun, sun_spec\n"
-            
+
         if self._use_free_ps:
             main += "\t\t, base_response_array_free_ps, ps_spec\n"
 
@@ -1185,7 +1160,7 @@ class StanModelConstructor(object):
 
         main += "\t);\n"
         if self._profile:
-            main += "\t}\n" 
+            main += "\t}\n"
         text = text + main + "}\n\n"
         return text
 
@@ -1212,12 +1187,10 @@ class StanModelConstructor(object):
 
         if self._use_sun:
             text += "\tvector[num_data_points] f_sun;\n"
-            
+
         if self._use_free_ps:
             text += "\tvector[num_data_points] f_free_ps[num_free_ps_comp];\n"
 
-
-            
         if self._use_saa:
             text += "\tf_saa = saa_total(saa_norm_vec, saa_decay_vec, t_t0, num_data_points, num_saa_exits);\n"
             text += "\ttot += f_saa;\n"
@@ -1234,14 +1207,14 @@ class StanModelConstructor(object):
             if self._use_eff_area_correction:
                 text += (
                     "\tfor (i in 1:num_fixed_comp){\n"
-                    #"\t\tprint(eff_area_array);\n"
-                    #"\t\tprint(norm_fixed[i]);\n"
-                    #"\t\tprint(base_counts_array[i]);\n"
+                    # "\t\tprint(eff_area_array);\n"
+                    # "\t\tprint(norm_fixed[i]);\n"
+                    # "\t\tprint(base_counts_array[i]);\n"
                     "\t\tf_fixed_global[i]=eff_area_array.*(norm_fixed[i]*base_counts_array[i]);\n"
                     "\t\ttot+=f_fixed_global[i];\n"
                     "\t}\n"
                 )
-                
+
             else:
                 text += (
                     "\tfor (i in 1:num_fixed_comp){\n"
@@ -1249,7 +1222,6 @@ class StanModelConstructor(object):
                     "\t\ttot+=f_fixed_global[i];\n"
                     "\t}\n"
                 )
-                
 
         if self._use_free_earth:
             if self._use_eff_area_correction:
@@ -1260,14 +1232,18 @@ class StanModelConstructor(object):
 
         if self._use_free_cgb:
             if self._use_eff_area_correction:
-                text += "\tf_cgb = eff_area_array.*(base_response_array_cgb*cgb_spec);\n"
+                text += (
+                    "\tf_cgb = eff_area_array.*(base_response_array_cgb*cgb_spec);\n"
+                )
             else:
                 text += "\tf_cgb = base_response_array_cgb*cgb_spec;\n"
             text += "\ttot += f_cgb;\n"
-            
+
         if self._use_sun:
             if self._use_eff_area_correction:
-                text += "\tf_sun = eff_area_array.*(base_response_array_sun*sun_spec);\n"
+                text += (
+                    "\tf_sun = eff_area_array.*(base_response_array_sun*sun_spec);\n"
+                )
             else:
                 text += "\tf_sun = base_response_array_sun*sun_spec;\n"
             text += "\ttot += f_sun;\n"
@@ -1287,7 +1263,7 @@ class StanModelConstructor(object):
                     "\t\ttot+=f_free_ps[i];\n"
                     "\t}\n"
                 )
-                
+
         text += "\tppc = poisson_rng(tot+0.000001);\n"
 
         text = text + "}\n\n"
@@ -1309,7 +1285,7 @@ class StanModelConstructor(object):
 
         if self._use_free_cgb:
             keys.append("f_cgb")
-            
+
         if self._use_sun:
             keys.append("f_sun")
 
@@ -1349,7 +1325,7 @@ class StanModelConstructor(object):
 
         if self._use_free_cgb:
             text += "\t tot+= base_response_array_cgb*cgb_spec;\n"
-            
+
         if self._use_sun:
             text += "\t tot+= base_response_array_sun*sun_spec;\n"
 
@@ -1396,7 +1372,7 @@ class StanDataConstructor(object):
             self._geometry = model_generator.geometry
 
             self._dets_saa = model_generator._dets_saa
-            
+
         self._threads = threads_per_chain
 
         self._dets = self._data.detectors
@@ -1514,7 +1490,7 @@ class StanDataConstructor(object):
 
         mu_norm_cont = np.zeros((num_cont_sources, self._ndets, self._nechans))
         sigma_norm_cont = np.zeros((num_cont_sources, self._ndets, self._nechans))
-        
+
         for i, s in enumerate(list(self._model.continuum_sources.values())):
             if "constant" in s.name.lower():
                 index = 0
@@ -1670,7 +1646,7 @@ class StanDataConstructor(object):
             self._base_response_array_cgb = base_response_array_cgb[2:-2].reshape(
                 -1, self._num_Ebins_in
             )
-            
+
         if base_response_array_sun is not None:
 
             eff_rsp_new_sun = interp1d(
@@ -1734,7 +1710,7 @@ class StanDataConstructor(object):
         """
         # One source per exit (not per exit and echan like in the python code)
         self._num_saa_exits = int(len(self._model.saa_sources) / self._nechans)
-                
+
         mu_norm_saa = np.zeros((self._num_saa_exits, self._ndets, self._nechans))
         sigma_norm_saa = np.zeros((self._num_saa_exits, self._ndets, self._nechans))
         mu_decay_saa = np.zeros((self._num_saa_exits, self._ndets, self._nechans))
@@ -1760,10 +1736,10 @@ class StanDataConstructor(object):
                 det_idx_stan = 1
             else:
                 # TODO: Fix me.
-                #raise Exception(
+                # raise Exception(
                 #    "You selected decay per detector in the config which causes"
                 #    "problems in the stan instantiation instantiation"
-                #)
+                # )
                 det_idx = s._shape._det_idx
                 det_idx_stan = det_idx + 1
 
@@ -1858,7 +1834,7 @@ class StanDataConstructor(object):
             data_dict["base_counts_array"] = self._global_counts[:, mask_zeros]
             data_dict["mu_norm_fixed"] = self._mu_norm_fixed
             data_dict["sigma_norm_fixed"] = self._sigma_norm_fixed
-        #else:
+        # else:
         #    raise NotImplementedError
 
         if self._base_response_array_ps is not None:
@@ -1895,35 +1871,35 @@ class StanDataConstructor(object):
             if isinstance(self._dets_saa, str):
                 data_dict["dets_saa"] = np.ones(self._ndets, dtype=int)
                 data_dict["num_dets_saa"] = self._ndets
-                data_dict["dets_saa_all_dets"] = np.arange(1, self._ndets+1)
+                data_dict["dets_saa_all_dets"] = np.arange(1, self._ndets + 1)
             else:
                 dets_saa_mask = np.zeros(self._ndets, dtype=int)
                 dets_saa_all_dets = np.zeros(self._ndets, dtype=int)
                 n = 0
                 for i, d in enumerate(self._dets_saa):
-                    idx = np.argwhere(d==np.array(self._dets))[0,0]
+                    idx = np.argwhere(d == np.array(self._dets))[0, 0]
                     dets_saa_mask[idx] = 1
 
-                    dets_saa_all_dets[idx] = i+1
-                    
+                    dets_saa_all_dets[idx] = i + 1
+
                 data_dict["dets_saa"] = dets_saa_mask
                 data_dict["num_dets_saa"] = int(np.sum(dets_saa_mask))
                 data_dict["dets_saa_all_dets"] = dets_saa_all_dets
-            
+
         if self._cont_counts is not None:
             data_dict["num_cont_comp"] = 2
             data_dict["base_counts_array_cont"] = self._cont_counts[:, mask_zeros]
             data_dict["mu_norm_cont"] = self._mu_norm_cont
             data_dict["sigma_norm_cont"] = self._sigma_norm_cont
-            
+
         # Stan grainsize for reduced_sum
         if self._threads == 1:
             data_dict["grainsize"] = 1
         else:
             data_dict["grainsize"] = 1
-            #int(
+            # int(
             #    (self._ntimebins - 4) * self._ndets * self._nechans / self._threads
-            #)
+            # )
         return data_dict
 
     @property
@@ -1997,44 +1973,64 @@ class ReadStanArvizResult(object):
                 ]
                 fig, ax = plt.subplots()
 
-                ppc_min = np.percentile(self._ppc[mask], 5, axis=1)/ self._bin_width
-                ppc_max = np.percentile(self._ppc[mask], 95, axis=1)/ self._bin_width
+                ppc_min = np.percentile(self._ppc[mask], 5, axis=1) / self._bin_width
+                ppc_max = np.percentile(self._ppc[mask], 95, axis=1) / self._bin_width
 
-                ax.fill_between(np.mean(self._time_bins, axis=1),
-                                y1=ppc_min,
-                                y2=ppc_max,
-                                color="darkgreen",
-                                label="PPC",
-                                alpha=0.3)
+                ax.fill_between(
+                    np.mean(self._time_bins, axis=1),
+                    y1=ppc_min,
+                    y2=ppc_max,
+                    color="darkgreen",
+                    label="PPC",
+                    alpha=0.3,
+                )
 
                 for key in self._parts.keys():
                     if len(self._parts[key].shape) == 3:
                         for k in range(len(self._parts[key])):
-                            part_min = np.percentile(self._parts[key][k][mask], 5, axis=1)/ self._bin_width
-                            part_max = np.percentile(self._parts[key][k][mask], 95, axis=1)/ self._bin_width
-                            if k==0:
-                                ax.fill_between(np.mean(self._time_bins, axis=1),
-                                                y1=part_min,
-                                                y2=part_max,
-                                                color=colors.get(key, "gray"),
-                                                label=key,
-                                                alpha=0.3)
+                            part_min = (
+                                np.percentile(self._parts[key][k][mask], 5, axis=1)
+                                / self._bin_width
+                            )
+                            part_max = (
+                                np.percentile(self._parts[key][k][mask], 95, axis=1)
+                                / self._bin_width
+                            )
+                            if k == 0:
+                                ax.fill_between(
+                                    np.mean(self._time_bins, axis=1),
+                                    y1=part_min,
+                                    y2=part_max,
+                                    color=colors.get(key, "gray"),
+                                    label=key,
+                                    alpha=0.3,
+                                )
                             else:
-                                ax.fill_between(np.mean(self._time_bins, axis=1),
-                                                y1=part_min,
-                                                y2=part_max,
-                                                color=colors.get(key, "gray"),
-                                                alpha=0.3)
+                                ax.fill_between(
+                                    np.mean(self._time_bins, axis=1),
+                                    y1=part_min,
+                                    y2=part_max,
+                                    color=colors.get(key, "gray"),
+                                    alpha=0.3,
+                                )
                     else:
-                        part_min = np.percentile(self._parts[key][mask], 5, axis=1)/ self._bin_width
-                        part_max = np.percentile(self._parts[key][mask], 95, axis=1)/ self._bin_width
+                        part_min = (
+                            np.percentile(self._parts[key][mask], 5, axis=1)
+                            / self._bin_width
+                        )
+                        part_max = (
+                            np.percentile(self._parts[key][mask], 95, axis=1)
+                            / self._bin_width
+                        )
 
-                        ax.fill_between(np.mean(self._time_bins, axis=1),
-                                            y1=part_min,
-                                            y2=part_max,
-                                            color=colors.get(key, "gray"),
-                                            label=key,
-                                            alpha=0.3)
+                        ax.fill_between(
+                            np.mean(self._time_bins, axis=1),
+                            y1=part_min,
+                            y2=part_max,
+                            color=colors.get(key, "gray"),
+                            label=key,
+                            alpha=0.3,
+                        )
                 """
                 for i in np.linspace(0, self._ppc.shape[1] - 1, 30, dtype=int):
                     
@@ -2130,6 +2126,5 @@ class ReadStanArvizResult(object):
                     lh.set_alpha(1)
                 t = fig.suptitle(f"Detector {d} - Echan {e}")
                 fig.savefig(
-                    f"ppc_result_det_{d}_echan_{e}.png",
-                    bbox_extra_artists=(lgd,t)
+                    f"ppc_result_det_{d}_echan_{e}.png", bbox_extra_artists=(lgd, t)
                 )  # , bbox_extra_artists=(lgd,t), dpi=450, bbox_inches='tight')

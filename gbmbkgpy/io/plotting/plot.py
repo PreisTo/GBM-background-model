@@ -99,7 +99,6 @@ class Plotter(object):
         legend_outside=False,
         **kwargs
     ):
-
         """
         Plot the current model with or without the data and the residuals. Multiple models can be plotted by supplying
         a previous axis to 'model_subplot'.
@@ -373,7 +372,7 @@ class Plotter(object):
         :param model: Model object
         :param time_bin: Time bins where to compute ppc steps
         :param saa_mask: Mask which time bins are set to zero
-        :param echan: Which echan 
+        :param echan: Which echan
         :param q_levels: At which levels the ppc should be plotted
         :param colors: colors for the different q_level
         """

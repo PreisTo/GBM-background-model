@@ -51,7 +51,16 @@ valid_det_names = [
 
 
 class Data(object):
-    def __init__(self, dates, detectors, data_type, echans, simulation=False, min_time=None, max_time=None):
+    def __init__(
+        self,
+        dates,
+        detectors,
+        data_type,
+        echans,
+        simulation=False,
+        min_time=None,
+        max_time=None,
+    ):
         """
         Initalize the ContinousData Class, which contains the information about the time bins
         and counts of the data.
@@ -335,13 +344,15 @@ class Data(object):
         for det_idx, det in enumerate(self._detectors):
 
             for day_idx, day in enumerate(self._dates):
-                counts, time_bins, day_met = self._one_day_one_det_data(day, det, min_time, max_time)
+                counts, time_bins, day_met = self._one_day_one_det_data(
+                    day, det, min_time, max_time
+                )
 
                 if day_idx == 0:
                     count_array = counts
                     time_bins_array = time_bins
                     day_met_array = np.array([day_met])
-                    
+
                     day_start_times = np.array([time_bins[0, 0]])
                     day_stop_times = np.array([time_bins[-1, 1]])
 
@@ -354,7 +365,7 @@ class Data(object):
                         following_day = np.append(following_day, True)
                     else:
                         following_day = np.append(following_day, False)
-                        
+
                     count_array = np.append(count_array, counts[start_index:], axis=0)
                     time_bins_array = np.append(
                         time_bins_array, time_bins[start_index:], axis=0
@@ -482,11 +493,11 @@ class Data(object):
         print(bin_stop)
         # slice the time between min and max time
         if min_time:
-            start_idx = np.argwhere(bin_stop>min_time)[0,0]
+            start_idx = np.argwhere(bin_stop > min_time)[0, 0]
         else:
             start_idx = 0
         if max_time:
-            stop_idx = np.argwhere(bin_start<max_time)[-1,0]
+            stop_idx = np.argwhere(bin_start < max_time)[-1, 0]
         else:
             stop_idx = -1
 
@@ -494,7 +505,7 @@ class Data(object):
         bin_start = bin_start[start_idx:stop_idx]
         bin_stop = bin_stop[start_idx:stop_idx]
         counts = counts[start_idx:stop_idx]
-            
+
         # Calculate the MET time for the day
         day = day
         year = "20%s" % day[:2]

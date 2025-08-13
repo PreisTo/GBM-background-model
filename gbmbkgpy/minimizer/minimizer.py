@@ -173,10 +173,10 @@ class Minimizer(object):
     def display(self, label="fitted_value"):
         """
         display the results using pandas series or dataframe
-        
-        
-        :param self: 
-        :return: 
+
+
+        :param self:
+        :return:
         """
 
         self._fit_params = {}
